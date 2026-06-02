@@ -49,21 +49,21 @@ export default function ProfilePage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
             <label className="block text-sm font-medium text-gray-700">Age</label>
-            <input type="number" name="age" value={profile.age} onChange={handleChange} required className="mt-1 w-full rounded-md border-gray-300 shadow-sm p-3 border focus:border-green-500 focus:ring-green-500 outline-none" />
+            <input type="number" name="age" value={profile.age} onChange={handleChange} required className="mt-1 w-full rounded-md border-gray-300 shadow-sm p-3 border focus:border-green-500 focus:ring-green-500 outline-none bg-white text-gray-900" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">Weight (kg)</label>
-            <input type="number" name="weight" value={profile.weight} onChange={handleChange} required className="mt-1 w-full rounded-md border-gray-300 shadow-sm p-3 border focus:border-green-500 focus:ring-green-500 outline-none" />
+            <input type="number" name="weight" value={profile.weight} onChange={handleChange} required className="mt-1 w-full rounded-md border-gray-300 shadow-sm p-3 border focus:border-green-500 focus:ring-green-500 outline-none bg-white text-gray-900" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">Height (cm)</label>
-            <input type="number" name="height" value={profile.height} onChange={handleChange} required className="mt-1 w-full rounded-md border-gray-300 shadow-sm p-3 border focus:border-green-500 focus:ring-green-500 outline-none" />
+            <input type="number" name="height" value={profile.height} onChange={handleChange} required className="mt-1 w-full rounded-md border-gray-300 shadow-sm p-3 border focus:border-green-500 focus:ring-green-500 outline-none bg-white text-gray-900" />
           </div>
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Goal</label>
-          <select name="goal" value={profile.goal} onChange={handleChange} className="w-full rounded-md border-gray-300 shadow-sm p-3 border focus:border-green-500 focus:ring-green-500 outline-none">
+          <select name="goal" value={profile.goal} onChange={handleChange} className="w-full rounded-md border-gray-300 shadow-sm p-3 border focus:border-green-500 focus:ring-green-500 outline-none bg-white text-gray-900">
             <option value="maintain">Maintain Weight</option>
             <option value="cutting">Cutting / Weight Loss</option>
             <option value="bulking">Bulking / Muscle Gain</option>
