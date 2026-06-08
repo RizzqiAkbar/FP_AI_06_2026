@@ -142,22 +142,32 @@ def analyze():
             health_cond_str
         )
 
+        # Log OCR and AI results for debugging
+        print("[analyze] OCR text length:", len(parsed_data.get("combined_text", "")))
+        print("[analyze] AI result:", ai_result)
+
         # === BUILD RESPONSE ===
+        analysis_section = {
+            "nutrition_summary": parsed_data.get("nutrition_data", {}),
+            "risk_score": risk["score"],
+            "risk_level": risk["risk_level"],
+            "flagged_ingredients": flagged,
+            "analysis": ai_result.get("analysis", ""),
+            "recommendation": ai_result.get("recommendation", ""),
+            "alternatives": ai_result.get("alternatives", alternatives)
+        }
+
+        # If AI returned an error (e.g., missing API key), surface it to frontend
+        if isinstance(ai_result, dict) and ai_result.get("error"):
+            analysis_section["error"] = ai_result.get("error")
+
         response = {
             "success": True,
             "ocr_status": ocr_status,
             "ocr_text": parsed_data.get("combined_text", ""),
             "product_name": parsed_data.get("product_name", ""),
             "user_profile": user_profile,
-            "analysis": {
-                "nutrition_summary": parsed_data.get("nutrition_data", {}),
-                "risk_score": risk["score"],
-                "risk_level": risk["risk_level"],
-                "flagged_ingredients": flagged,
-                "analysis": ai_result.get("analysis", ""),
-                "recommendation": ai_result.get("recommendation", ""),
-                "alternatives": ai_result.get("alternatives", alternatives)
-            }
+            "analysis": analysis_section
         }
 
         if ocr_status == "failed":
@@ -216,13 +226,62 @@ def upload():
         nutrition_data = parse_nutrition(text)
         ingredients = parse_ingredients(text)
 
-        return jsonify({
+        # Optionally run AI analysis when user_profile provided or ai=true
+        user_profile = {}
+        ai_section = None
+        try:
+            import json
+            user_profile_str = request.form.get("user_profile", "")
+            if user_profile_str:
+                user_profile = json.loads(user_profile_str)
+        except Exception:
+            user_profile = {}
+
+        run_ai = request.form.get("ai", "false").lower() == "true" or bool(user_profile)
+
+        if run_ai:
+            try:
+                # re-use risk calculation and ingredient checks from full analyze flow
+                risk = calculate_risk_score(nutrition_data, user_profile.get("conditions", ["normal"])[0] if user_profile else "normal")
+                flagged = check_ingredients(text)
+
+                ai_result = get_gemini_analysis(
+                    text,
+                    user_profile,
+                    risk["score"],
+                    risk["risk_level"],
+                    flagged,
+                )
+
+                analysis_section = {
+                    "nutrition_summary": nutrition_data,
+                    "risk_score": risk["score"],
+                    "risk_level": risk["risk_level"],
+                    "flagged_ingredients": flagged,
+                    "analysis": ai_result.get("analysis", "") if isinstance(ai_result, dict) else "",
+                    "recommendation": ai_result.get("recommendation", "") if isinstance(ai_result, dict) else "",
+                    "alternatives": ai_result.get("alternatives", []) if isinstance(ai_result, dict) else [],
+                }
+
+                if isinstance(ai_result, dict) and ai_result.get("error"):
+                    analysis_section["error"] = ai_result.get("error")
+
+                ai_section = analysis_section
+            except Exception as e:
+                print("[upload] AI error:", e)
+
+        response = {
             "success": True,
             "ocr_status": "success",
             "ocr_text": text,
             "nutrition_data": nutrition_data,
             "ingredients": ingredients,
-        }), 200
+        }
+
+        if ai_section is not None:
+            response["analysis"] = ai_section
+
+        return jsonify(response), 200
 
     except Exception as e:
         return jsonify({"error": f"OCR error: {str(e)}"}), 500
