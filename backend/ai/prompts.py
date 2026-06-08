@@ -1,14 +1,29 @@
 def get_analysis_prompt(
     ocr_text,
+    parsed_nutrition,
     user_profile,
     risk_score,
     risk_level,
     flagged_ingredients
 ):
-    return f"""
-You are Nutrify AI, an expert nutritionist and health advisor.
+    nutrition_summary_text = "None"
+    if parsed_nutrition:
+        summary_lines = []
+        for key in ["calories", "protein", "sugar", "fat"]:
+            if parsed_nutrition.get(key) is not None:
+                summary_lines.append(f"- {key.capitalize()}: {parsed_nutrition.get(key)}")
+        if summary_lines:
+            nutrition_summary_text = "\n" + "\n".join(summary_lines)
 
-Analyze this food product based on:
+    return f"""
+Analyze the nutrition information below.
+
+Do not mention product names, brand names, or company names.
+Refer to the item only as "this product" or "the product".
+Do not use any introduction such as "As Nutrify AI", "As an AI", "I've analyzed", or similar.
+Start directly with the nutritional insight.
+
+PARSED NUTRITION SUMMARY:{nutrition_summary_text}
 
 FOOD INFORMATION:
 {ocr_text}
@@ -27,8 +42,7 @@ Risk Level: {risk_level}
 FLAGGED INGREDIENTS:
 {', '.join(flagged_ingredients) if flagged_ingredients else 'None'}
 
-Provide response in JSON format only:
-
+Provide ONLY valid JSON with this exact structure:
 {{
     "analysis": "Personalized explanation",
     "recommendation": "Consume, Limit, or Avoid",
@@ -38,6 +52,4 @@ Provide response in JSON format only:
         "Alternative 3"
     ]
 }}
-
-Return ONLY valid JSON.
 """

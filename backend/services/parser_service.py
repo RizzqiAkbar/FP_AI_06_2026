@@ -77,11 +77,17 @@ def parse_nutrition(ocr_text: str) -> dict:
         for pattern in regex_list:
             match = re.search(pattern, ocr_text)
             if match:
-                value = float(match.group(1))
+                value = float(match.group(1).replace(',', ''))
                 # Calories biasanya integer
                 if nutrient == "calories":
                     value = int(value)
-                nutrition_data[nutrient] = value
+
+                # Normalize total fat to fat for frontend consistency
+                if nutrient == "total_fat":
+                    nutrition_data["fat"] = value
+                    nutrition_data["total_fat"] = value
+                else:
+                    nutrition_data[nutrient] = value
                 break  # Ambil match pertama yang berhasil
 
     return nutrition_data

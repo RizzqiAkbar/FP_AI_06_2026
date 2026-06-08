@@ -7,22 +7,26 @@ interface ResultCardProps {
 
 export default function ResultCard({ result, onScanAnother }: ResultCardProps) {
   const { analysis } = result;
+  const nutritionSummary = analysis?.nutrition_summary || (result as any).nutrition_data || {};
 
-  const getRiskColor = (score: number) => {
-    if (score < 50) return 'text-red-600';
-    if (score < 80) return 'text-yellow-600';
+  const getRiskColor = (score: number | string) => {
+    if (typeof score === 'string' || isNaN(Number(score))) return 'text-gray-400';
+    if (Number(score) < 50) return 'text-red-600';
+    if (Number(score) < 80) return 'text-yellow-600';
     return 'text-green-600';
   };
 
-  const getRiskBg = (score: number) => {
-    if (score < 50) return 'bg-red-50 border-red-200 shadow-red-100';
-    if (score < 80) return 'bg-yellow-50 border-yellow-200 shadow-yellow-100';
+  const getRiskBg = (score: number | string) => {
+    if (typeof score === 'string' || isNaN(Number(score))) return 'bg-gray-50 border-gray-200 shadow-gray-100';
+    if (Number(score) < 50) return 'bg-red-50 border-red-200 shadow-red-100';
+    if (Number(score) < 80) return 'bg-yellow-50 border-yellow-200 shadow-yellow-100';
     return 'bg-green-50 border-green-200 shadow-green-100';
   };
 
-  const getRiskLabel = (score: number) => {
-    if (score < 50) return 'High Risk';
-    if (score < 80) return 'Moderate Risk';
+  const getRiskLabel = (score: number | string) => {
+    if (typeof score === 'string' || isNaN(Number(score))) return 'Unknown Risk';
+    if (Number(score) < 50) return 'High Risk';
+    if (Number(score) < 80) return 'Moderate Risk';
     return 'Safe to Consume';
   };
 
@@ -51,13 +55,17 @@ export default function ResultCard({ result, onScanAnother }: ResultCardProps) {
           <span className={`text-8xl font-black tracking-tighter ${getRiskColor(analysis.risk_score)}`}>
             {analysis.risk_score}
           </span>
-          <span className="text-4xl text-gray-400 font-bold ml-2">/100</span>
+          {typeof analysis.risk_score === 'number' && (
+            <span className="text-4xl text-gray-400 font-bold ml-2">/100</span>
+          )}
         </div>
         <div className="mt-4 relative z-10">
           <span className={`inline-block px-6 py-2 rounded-full text-xl font-black tracking-wide ${
-            analysis.risk_score < 50 ? 'bg-red-100 text-red-700' : 
-            analysis.risk_score < 80 ? 'bg-yellow-100 text-yellow-700' : 
-            'bg-green-100 text-green-700'
+            typeof analysis.risk_score === 'number' ? (
+              analysis.risk_score < 50 ? 'bg-red-100 text-red-700' : 
+              analysis.risk_score < 80 ? 'bg-yellow-100 text-yellow-700' : 
+              'bg-green-100 text-green-700'
+            ) : 'bg-gray-200 text-gray-700'
           }`}>
             {getRiskLabel(analysis.risk_score)}
           </span>
@@ -85,19 +93,19 @@ export default function ResultCard({ result, onScanAnother }: ResultCardProps) {
           <ul className="space-y-5">
             <li className="flex justify-between items-center border-b border-gray-50 pb-4">
               <span className="text-gray-500 font-semibold text-lg">Calories</span>
-              <span className="font-black text-gray-800 bg-gray-100/80 px-4 py-1.5 rounded-lg shadow-sm">{analysis.nutrition_summary?.calories || 'N/A'}</span>
+              <span className="font-black text-gray-800 bg-gray-100/80 px-4 py-1.5 rounded-lg shadow-sm">{nutritionSummary?.calories ?? 0}</span>
             </li>
             <li className="flex justify-between items-center border-b border-gray-50 pb-4">
               <span className="text-gray-500 font-semibold text-lg">Protein</span>
-              <span className="font-black text-gray-800 bg-gray-100/80 px-4 py-1.5 rounded-lg shadow-sm">{analysis.nutrition_summary?.protein || 'N/A'}</span>
+              <span className="font-black text-gray-800 bg-gray-100/80 px-4 py-1.5 rounded-lg shadow-sm">{nutritionSummary?.protein ?? 0}</span>
             </li>
             <li className="flex justify-between items-center border-b border-gray-50 pb-4">
               <span className="text-gray-500 font-semibold text-lg">Sugar</span>
-              <span className="font-black text-gray-800 bg-gray-100/80 px-4 py-1.5 rounded-lg shadow-sm">{analysis.nutrition_summary?.sugar || 'N/A'}</span>
+              <span className="font-black text-gray-800 bg-gray-100/80 px-4 py-1.5 rounded-lg shadow-sm">{nutritionSummary?.sugar ?? 0}</span>
             </li>
             <li className="flex justify-between items-center">
               <span className="text-gray-500 font-semibold text-lg">Fat</span>
-              <span className="font-black text-gray-800 bg-gray-100/80 px-4 py-1.5 rounded-lg shadow-sm">{analysis.nutrition_summary?.fat || 'N/A'}</span>
+              <span className="font-black text-gray-800 bg-gray-100/80 px-4 py-1.5 rounded-lg shadow-sm">{nutritionSummary?.fat ?? 0}</span>
             </li>
           </ul>
         </div>

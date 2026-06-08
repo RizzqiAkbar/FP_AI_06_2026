@@ -131,6 +131,8 @@ def analyze():
         
         ai_result = get_gemini_analysis(
             parsed_data.get("combined_text", ""),
+            parsed_data.get("product_name", ""),
+            parsed_data.get("nutrition_data", {}),
             user_profile,
             risk["score"],
             risk["risk_level"],
@@ -247,6 +249,8 @@ def upload():
 
                 ai_result = get_gemini_analysis(
                     text,
+                    "",
+                    nutrition_data,
                     user_profile,
                     risk["score"],
                     risk["risk_level"],

@@ -11,6 +11,12 @@ def _parse_nutrient(value):
     return 0.0
 
 def calculate_risk_score(nutrition_data, health_condition="normal"):
+    if not nutrition_data:
+        return {
+            "score": "N/A",
+            "risk_level": "Unknown Risk"
+        }
+        
     score = 100
     
     # Extract nutrition values safely
