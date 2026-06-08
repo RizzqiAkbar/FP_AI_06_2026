@@ -13,7 +13,7 @@ def get_gemini_analysis(
     flagged_ingredients
 ):
 
-    api_key = os.getenv("GEMINI_API_KEY", "")
+    api_key = os.getenv("GEMINI_API_KEY")
 
     if not api_key:
         return {
