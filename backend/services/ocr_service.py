@@ -20,7 +20,7 @@ TESSERACT_CONFIG_LINE = r"--oem 3 --psm 7"
 TESSERACT_CONFIG_AUTO = r"--oem 3 --psm 3"
 
 
-def extract_text(image_path: str, lang: str = "eng") -> str:
+def extract_text(image_path: str, lang: str = "eng+ind") -> str:
     """
     Ekstrak teks dari gambar menggunakan Tesseract OCR.
 
@@ -88,7 +88,7 @@ def extract_text(image_path: str, lang: str = "eng") -> str:
     return best_text.strip()
 
 
-def extract_text_from_multiple(image_paths: dict, lang: str = "eng") -> dict:
+def extract_text_from_multiple(image_paths: dict, lang: str = "eng+ind") -> dict:
     """
     Ekstrak teks dari beberapa gambar (multi-image support).
 
