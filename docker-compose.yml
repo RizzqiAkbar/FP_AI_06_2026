@@ -1,0 +1,36 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: nutriguard-backend
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_DEBUG=True
+      - TESSERACT_CMD=/usr/bin/tesseract
+      - SECRET_KEY=${SECRET_KEY:-nutriguard-dev-key}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+    volumes:
+      # Mount source code untuk hot-reload saat development
+      - ./backend:/app
+      # Exclude venv dan __pycache__ dari mount
+      - /app/__pycache__
+      - /app/venv
+    restart: unless-stopped
+
+  # Frontend (uncomment ketika Anggota 1 sudah siap)
+  # frontend:
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #   container_name: nutriguard-frontend
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     - NEXT_PUBLIC_API_URL=http://backend:5000
+  #   depends_on:
+  #     - backend
+  #   restart: unless-stopped
