@@ -112,22 +112,18 @@ def analyze():
         parsed_data = combine_ocr_results(ocr_results)
 
         # === AMBIL DATA PROFIL USER ===
-        user_profile = {
-            "age": request.form.get("age", type=int) or "N/A",
-            "weight": request.form.get("weight", type=float) or "N/A",
-            "height": request.form.get("height", type=float) or "N/A",
-            "goal": request.form.get("goal", ""),
-            "health_conditions": [
-                c.strip()
-                for c in request.form.get("health_conditions", "").split(",")
-                if c.strip()
-            ],
-        }
+        import json
+        user_profile_str = request.form.get("user_profile", "{}")
+        try:
+            user_profile = json.loads(user_profile_str)
+        except Exception:
+            user_profile = {}
         
         # Format for risk score (needs a single string representing condition, or default normal)
         health_cond_str = "normal"
-        if user_profile["health_conditions"]:
-            health_cond_str = user_profile["health_conditions"][0]
+        conditions = user_profile.get("conditions", [])
+        if conditions and len(conditions) > 0:
+            health_cond_str = conditions[0]
 
         # === AI INTEGRATION ===
         risk = calculate_risk_score(parsed_data.get("nutrition_data", {}), health_cond_str)
@@ -151,16 +147,17 @@ def analyze():
             "success": True,
             "ocr_status": ocr_status,
             "ocr_text": parsed_data.get("combined_text", ""),
-            "nutrition_data": parsed_data.get("nutrition_data", {}),
-            "ingredients": parsed_data.get("ingredients", []),
             "product_name": parsed_data.get("product_name", ""),
             "user_profile": user_profile,
-            "risk_score": risk["score"],
-            "risk_level": risk["risk_level"],
-            "flagged_ingredients": flagged,
-            "analysis": ai_result.get("analysis", ""),
-            "recommendation": ai_result.get("recommendation", ""),
-            "alternatives": ai_result.get("alternatives", alternatives)
+            "analysis": {
+                "nutrition_summary": parsed_data.get("nutrition_data", {}),
+                "risk_score": risk["score"],
+                "risk_level": risk["risk_level"],
+                "flagged_ingredients": flagged,
+                "analysis": ai_result.get("analysis", ""),
+                "recommendation": ai_result.get("recommendation", ""),
+                "alternatives": ai_result.get("alternatives", alternatives)
+            }
         }
 
         if ocr_status == "failed":

@@ -8,7 +8,7 @@ export const analyzeFood = async (imageFile: File, userProfile: any) => {
   formData.append('user_profile', JSON.stringify(userProfile));
 
   try {
-    const response = await axios.post(`${API_URL}/analyze/`, formData, {
+    const response = await axios.post(`${API_URL}/analyze`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },

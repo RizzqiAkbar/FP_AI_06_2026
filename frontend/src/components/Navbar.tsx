@@ -8,10 +8,11 @@ export default function Navbar() {
           <Link href="/" className="flex items-center space-x-2">
             <span className="text-2xl font-bold text-green-600">Nutrify</span>
           </Link>
-          <div className="flex space-x-6">
+          <div className="flex space-x-6 items-center">
             <Link href="/" className="text-gray-600 hover:text-green-600 font-medium">Home</Link>
-            <Link href="/profile" className="text-gray-600 hover:text-green-600 font-medium">Profile</Link>
-            <Link href="/scan" className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium">Scan Food</Link>
+            <Link href="/scan" className="text-gray-600 hover:text-green-600 font-medium">Scan Food</Link>
+            <Link href="/about" className="text-gray-600 hover:text-green-600 font-medium">About</Link>
+            <Link href="/profile" className="px-5 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 transition font-bold shadow-md hover:shadow-lg transform hover:-translate-y-0.5">Start Analysis</Link>
           </div>
         </div>
       </div>
