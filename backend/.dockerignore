@@ -1,0 +1,16 @@
+venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+uploads/*
+!uploads/.gitkeep
+.git/
+.vscode/
+.idea/
+*.egg-info/
+dist/
+build/
+test_*.py
+CHECKLIST_ANGGOTA_2.md
