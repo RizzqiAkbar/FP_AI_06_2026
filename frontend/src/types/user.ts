@@ -1,8 +1,8 @@
 export interface UserProfile {
+  name: string;
   age: number | '';
   weight: number | '';
   height: number | '';
-  gender: string;
   goal: string;
   conditions: string[];
 }

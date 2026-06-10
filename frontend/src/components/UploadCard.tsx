@@ -1,85 +1,159 @@
-import { useState, useRef } from 'react';
+'use client';
+
+import { useState, useRef, useCallback } from 'react';
 
 interface UploadCardProps {
-  onUpload: (file: File) => void;
+  onAnalyze: (files: File[]) => void;
   loading: boolean;
 }
 
-export default function UploadCard({ onUpload, loading }: UploadCardProps) {
-  const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+export default function UploadCard({ onAnalyze, loading }: UploadCardProps) {
+  const [files, setFiles] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
+  const [dragging, setDragging] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const selected = e.target.files[0];
-      setFile(selected);
-      setPreview(URL.createObjectURL(selected));
-    }
+  const addFiles = useCallback((incoming: FileList | null) => {
+    if (!incoming) return;
+    const valid = Array.from(incoming).filter(f => f.type.startsWith('image/'));
+    if (!valid.length) return;
+    setFiles(prev => {
+      const next = [...prev, ...valid];
+      setPreviews(prev => [
+        ...prev,
+        ...valid.map(f => URL.createObjectURL(f)),
+      ]);
+      return next;
+    });
+  }, []);
+
+  const removeFile = (index: number) => {
+    setFiles(prev => prev.filter((_, i) => i !== index));
+    setPreviews(prev => {
+      URL.revokeObjectURL(prev[index]);
+      return prev.filter((_, i) => i !== index);
+    });
   };
 
-  return (
-    <div className="bg-white/70 backdrop-blur-xl p-8 rounded-3xl shadow-2xl border border-white/40 text-center relative overflow-hidden">
-      <div className="absolute -top-24 -right-24 w-48 h-48 bg-green-200 rounded-full mix-blend-multiply filter blur-2xl opacity-50"></div>
-      <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-emerald-200 rounded-full mix-blend-multiply filter blur-2xl opacity-50"></div>
-      
-      <h2 className="text-4xl font-extrabold text-gray-900 mb-2 relative z-10 tracking-tight">Scan Food Packaging</h2>
-      <p className="text-gray-500 mb-8 relative z-10 text-lg">Upload an image for instant AI nutritional analysis.</p>
-      
-      <div className="grid grid-cols-3 gap-4 mb-8 text-sm font-medium text-gray-600">
-        <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm">Nutrition Facts</div>
-        <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm">Ingredient List</div>
-        <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm">Front Packaging</div>
-      </div>
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragging(false);
+    addFiles(e.dataTransfer.files);
+  };
 
-      <div 
-        onClick={() => !loading && fileInputRef.current?.click()}
-        className={`border-4 border-dashed rounded-3xl p-12 transition-all duration-300 relative z-10 ${
-          loading ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60' : 'border-gray-300 cursor-pointer hover:border-green-400 hover:bg-green-50/50 hover:shadow-inner'
-        }`}
+  const hasFiles = files.length > 0;
+
+  return (
+    <div className="bg-white rounded-[14px] p-6" style={{ border: '0.5px solid #d4e8c2' }}>
+
+      {/* Drop zone */}
+      <div
+        onClick={() => !loading && inputRef.current?.click()}
+        onDragOver={e => { e.preventDefault(); if (!loading) setDragging(true); }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={handleDrop}
+        className="rounded-xl transition-all"
+        style={{
+          border: `2px dashed ${dragging ? '#27500A' : '#97C459'}`,
+          backgroundColor: dragging ? '#EAF3DE' : '#f7faf4',
+          cursor: loading ? 'not-allowed' : 'pointer',
+          padding: hasFiles ? '16px' : '48px 24px',
+        }}
       >
-        {preview ? (
-          <div className="relative">
-            <img src={preview} alt="Preview" className="mx-auto max-h-64 object-contain rounded-xl shadow-md ring-1 ring-black/5" />
-            {!loading && (
-              <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center">
-                <span className="text-white font-bold bg-black/50 px-4 py-2 rounded-lg">Change Image</span>
-              </div>
-            )}
+        {hasFiles ? (
+          <div>
+            {/* Preview grid */}
+            <div className="grid grid-cols-3 gap-3 mb-3">
+              {previews.map((src, i) => (
+                <div key={i} className="relative group aspect-square">
+                  <img
+                    src={src}
+                    alt={`Foto ${i + 1}`}
+                    className="w-full h-full object-cover rounded-lg"
+                  />
+                  {!loading && (
+                    <button
+                      onClick={e => { e.stopPropagation(); removeFile(i); }}
+                      className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
+                    >
+                      <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              ))}
+
+              {/* Add more tile */}
+              {!loading && (
+                <div
+                  className="aspect-square rounded-lg flex flex-col items-center justify-center gap-1 transition-colors"
+                  style={{ border: '1.5px dashed #C0DD97', backgroundColor: '#f7faf4' }}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="#639922" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  <span className="text-xs" style={{ color: '#5F5E5A' }}>Tambah</span>
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-center" style={{ color: '#5F5E5A' }}>
+              {files.length} foto dipilih · Klik untuk tambah lebih
+            </p>
           </div>
         ) : (
-          <div className="text-gray-500 transform transition hover:scale-105">
-            <div className="w-24 h-24 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center text-green-600 text-4xl shadow-sm">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+          <div className="text-center">
+            <div
+              className="w-14 h-14 mx-auto mb-4 rounded-2xl flex items-center justify-center"
+              style={{ backgroundColor: '#EAF3DE' }}
+            >
+              <svg className="w-7 h-7" fill="none" stroke="#639922" strokeWidth={1.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
               </svg>
             </div>
-            <p className="text-xl font-bold text-gray-800">Click to choose a file</p>
-            <p className="text-sm mt-2 opacity-70">JPEG, PNG, WEBP (Max 5MB)</p>
+            <p className="text-sm font-medium mb-1" style={{ color: '#27500A' }}>
+              Klik atau seret foto ke sini
+            </p>
+            <p className="text-xs" style={{ color: '#5F5E5A' }}>
+              Bisa upload beberapa foto sekaligus · JPEG, PNG, WEBP
+            </p>
           </div>
         )}
       </div>
-      
-      <input 
-        type="file" 
-        accept="image/*" 
-        onChange={handleFileChange} 
-        ref={fileInputRef} 
-        className="hidden" 
+
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={e => addFiles(e.target.files)}
         disabled={loading}
       />
 
-      <button 
-        onClick={() => file && onUpload(file)} 
-        disabled={!file || loading}
-        className={`mt-8 w-full py-5 rounded-xl font-extrabold text-lg transition-all duration-300 relative z-10 ${
-          !file || loading 
-            ? 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none' 
-            : 'text-white bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 shadow-lg shadow-green-600/30 transform hover:-translate-y-1 hover:shadow-xl focus:ring-4 focus:ring-green-500/50'
-        }`}
+      {/* Analyze button */}
+      <button
+        onClick={() => hasFiles && !loading && onAnalyze(files)}
+        disabled={!hasFiles || loading}
+        className="mt-4 w-full py-3.5 rounded-xl text-sm font-semibold text-white transition-all"
+        style={{
+          backgroundColor: hasFiles && !loading ? '#27500A' : '#d4d4d4',
+          cursor: hasFiles && !loading ? 'pointer' : 'not-allowed',
+          color: hasFiles && !loading ? 'white' : '#9ca3af',
+        }}
       >
-        Analyze Food
+        {loading ? (
+          <span className="flex items-center justify-center gap-2">
+            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+            </svg>
+            Menganalisis...
+          </span>
+        ) : (
+          'Analisis sekarang'
+        )}
       </button>
     </div>
   );
