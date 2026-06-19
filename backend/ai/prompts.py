@@ -20,7 +20,7 @@ Analyze the nutrition information below.
 
 Do not mention product names, brand names, or company names.
 Refer to the item only as "this product" or "the product".
-Do not use any introduction such as "As Nutrify AI", "As an AI", "I've analyzed", or similar.
+Do not use any introduction such as "As Nutria AI", "As an AI", "I've analyzed", or similar.
 Start directly with the nutritional insight.
 
 PARSED NUTRITION SUMMARY:{nutrition_summary_text}

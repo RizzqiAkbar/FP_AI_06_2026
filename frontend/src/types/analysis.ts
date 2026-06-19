@@ -1,16 +1,23 @@
+import { UserProfile } from './user';
+
 export interface NutritionSummary {
   calories?: number;
-  protein?: number;
   fat?: number;
-  sugar?: number;
-  carbohydrates?: number;
+  total_fat?: number;
+  saturated_fat?: number;
+  trans_fat?: number;
+  cholesterol?: number;
   sodium?: number;
-  [key: string]: number | undefined;
+  total_carbohydrate?: number;
+  dietary_fiber?: number;
+  sugar?: number;
+  protein?: number;
+  serving_size?: number;
 }
 
-export interface AnalysisDetail {
+export interface AnalysisSection {
   nutrition_summary: NutritionSummary;
-  risk_score: number;
+  risk_score: number | string;
   risk_level: string;
   flagged_ingredients: string[];
   analysis: string;
@@ -21,7 +28,10 @@ export interface AnalysisDetail {
 
 export interface AnalysisResult {
   success: boolean;
-  ocr_status: string;
+  ocr_status: 'success' | 'failed';
+  ocr_text: string;
   product_name: string;
-  analysis: AnalysisDetail;
+  user_profile: UserProfile;
+  analysis: AnalysisSection;
+  message?: string;
 }

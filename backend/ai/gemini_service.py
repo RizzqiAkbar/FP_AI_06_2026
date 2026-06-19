@@ -16,7 +16,7 @@ def _sanitize_ocr_text(ocr_text: str, product_name: str = "") -> str:
 
     # Remove obvious product/brand lines and references
     cleaned = re.sub(r"(?mi)^(product|brand|company|made by|distributed by)\s*[:\-].*$", "", cleaned)
-    cleaned = re.sub(r"(?mi)^(as\s+a[n]?\s+ai|as\s+an\s+assistant|as\s+nutrify\s+ai).*", "", cleaned)
+    cleaned = re.sub(r"(?mi)^(as\s+a[n]?\s+ai|as\s+an\s+assistant|as\s+nutria\s+ai).*", "", cleaned)
     cleaned = re.sub(r"\n{2,}", "\n", cleaned)
     return cleaned.strip()
 
