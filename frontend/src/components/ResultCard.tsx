@@ -1,4 +1,6 @@
-import { AnalysisResult } from '../types/analysis';
+'use client';
+
+import { AnalysisResult, NutritionSummary } from '../types/analysis';
 
 interface ResultCardProps {
   result: AnalysisResult;
@@ -6,147 +8,222 @@ interface ResultCardProps {
   onScanAnother: () => void;
 }
 
-export default function ResultCard({ result, imageUrl, onScanAnother }: ResultCardProps) {
-  const { analysis } = result;
-  const nutritionSummary = analysis?.nutrition_summary || (result as any).nutrition_data || {};
+const NUTRISI_DISPLAY: { key: keyof NutritionSummary; label: string; unit: string }[] = [
+  { key: 'calories',           label: 'Kalori',          unit: 'kkal' },
+  { key: 'serving_size',       label: 'Ukuran Sajian',   unit: 'g' },
+  { key: 'total_fat',          label: 'Total Lemak',     unit: 'g' },
+  { key: 'fat',                label: 'Lemak',           unit: 'g' },
+  { key: 'saturated_fat',      label: 'Lemak Jenuh',     unit: 'g' },
+  { key: 'trans_fat',          label: 'Lemak Trans',     unit: 'g' },
+  { key: 'cholesterol',        label: 'Kolesterol',      unit: 'mg' },
+  { key: 'sodium',             label: 'Natrium',         unit: 'mg' },
+  { key: 'total_carbohydrate', label: 'Karbohidrat',     unit: 'g' },
+  { key: 'dietary_fiber',      label: 'Serat Pangan',    unit: 'g' },
+  { key: 'sugar',              label: 'Gula',            unit: 'g' },
+  { key: 'protein',            label: 'Protein',         unit: 'g' },
+];
 
-  const getRiskColor = (score: number | string) => {
-    if (typeof score === 'string' || isNaN(Number(score))) return 'text-gray-400';
-    if (Number(score) < 50) return 'text-red-600';
-    if (Number(score) < 80) return 'text-yellow-600';
-    return 'text-green-600';
-  };
+const getRiskLevelLabel = (level: string) => {
+  if (level === 'Safe') return 'Aman';
+  if (level === 'Moderate Risk') return 'Risiko Sedang';
+  if (level === 'High Risk') return 'Risiko Tinggi';
+  return 'Tidak Diketahui';
+};
 
-  const getRiskBg = (score: number | string) => {
-    if (typeof score === 'string' || isNaN(Number(score))) return 'bg-gray-50 border-gray-200 shadow-gray-100';
-    if (Number(score) < 50) return 'bg-red-50 border-red-200 shadow-red-100';
-    if (Number(score) < 80) return 'bg-yellow-50 border-yellow-200 shadow-yellow-100';
-    return 'bg-green-50 border-green-200 shadow-green-100';
-  };
+const getRecommendationLabel = (rec: string) => {
+  if (rec?.toLowerCase().includes('consume')) return 'Aman dikonsumsi';
+  if (rec?.toLowerCase().includes('limit')) return 'Batasi konsumsi';
+  if (rec?.toLowerCase().includes('avoid')) return 'Hindari';
+  return rec;
+};
 
-  const getRiskLabel = (score: number | string) => {
-    if (typeof score === 'string' || isNaN(Number(score))) return 'Unknown Risk';
-    if (Number(score) < 50) return 'High Risk';
-    if (Number(score) < 80) return 'Moderate Risk';
-    return 'Safe to Consume';
-  };
+const getRiskScoreColors = (score: number | string) => {
+  const n = Number(score);
+  if (isNaN(n)) return { bg: '#f7faf4', text: '#5F5E5A', bar: '#d4e8c2', border: '#d4e8c2' };
+  if (n <= 30) return { bg: '#EAF3DE', text: '#27500A', bar: '#639922', border: '#C0DD97' };
+  if (n <= 60) return { bg: '#fef9c3', text: '#854d0e', bar: '#f59e0b', border: '#fde047' };
+  return { bg: '#fee2e2', text: '#991b1b', bar: '#ef4444', border: '#fca5a5' };
+};
+
+const getRiskLevelColors = (level: string) => {
+  if (level === 'Safe') return { bg: '#EAF3DE', text: '#27500A', border: '#C0DD97' };
+  if (level === 'Moderate Risk') return { bg: '#fef9c3', text: '#854d0e', border: '#fde047' };
+  if (level === 'High Risk') return { bg: '#fee2e2', text: '#991b1b', border: '#fca5a5' };
+  return { bg: '#f7faf4', text: '#5F5E5A', border: '#d4e8c2' };
+};
+
+export default function ResultCard({ result, onScanAnother }: ResultCardProps) {
+  const { analysis, ocr_status } = result;
+  const ns = analysis?.nutrition_summary || {};
+  const scoreColors = getRiskScoreColors(analysis.risk_score);
+  const levelColors = getRiskLevelColors(analysis.risk_level);
+  const scoreNum = Number(analysis.risk_score);
+  const hasScore = !isNaN(scoreNum);
+
+  const visibleNutrition = NUTRISI_DISPLAY.filter(({ key }) => ns[key] !== undefined);
 
   return (
-    <div className="space-y-8 animate-fade-in-up">
-      <div className="flex justify-between items-center mb-4">
-        <div>
-          <h2 className="text-4xl font-extrabold text-gray-900 tracking-tight">Analysis Result</h2>
-          <p className="text-gray-500 mt-1">Personalized nutrition insights based on your profile.</p>
-        </div>
-        <button 
-          onClick={onScanAnother} 
-          className="px-6 py-3 bg-white text-gray-800 rounded-xl font-bold shadow-sm border border-gray-200 hover:bg-gray-50 hover:shadow-md transition-all duration-200 flex items-center"
+    <div className="space-y-4">
+
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold" style={{ color: '#27500A' }}>Hasil Analisis</h2>
+        <button
+          onClick={onScanAnother}
+          className="px-4 py-2 text-sm font-medium rounded-xl transition-opacity hover:opacity-80"
+          style={{ backgroundColor: '#EAF3DE', color: '#27500A', border: '1px solid #C0DD97' }}
         >
-          <span className="mr-2">↻</span> Scan Another
+          ↻ Scan Lagi
         </button>
       </div>
 
-      {/* Scanned Image */}
-      {imageUrl && (
-        <div className="bg-white/80 backdrop-blur-md p-4 rounded-3xl shadow-lg border border-gray-100 flex justify-center mb-8">
-          <img src={imageUrl} alt="Scanned Food Packaging" className="max-h-64 object-contain rounded-2xl shadow-sm" />
+
+      {/* Nama produk */}
+      {result.product_name && (
+        <div className="bg-white rounded-[14px] px-5 py-3" style={{ border: '0.5px solid #d4e8c2' }}>
+          <p className="text-xs font-semibold uppercase tracking-widest mb-0.5" style={{ color: '#639922' }}>Produk</p>
+          <p className="text-sm font-semibold" style={{ color: '#27500A' }}>{result.product_name}</p>
         </div>
       )}
-      
-      {/* Score Card */}
-      <div className={`relative overflow-hidden p-10 rounded-3xl shadow-lg border text-center transition-all duration-500 hover:shadow-xl ${getRiskBg(analysis.risk_score)}`}>
-        <div className="absolute top-0 right-0 p-8 opacity-10">
-          <svg className="w-32 h-32" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L1 21h22L12 2zm0 3.99L19.53 19H4.47L12 5.99zM11 16h2v2h-2zm0-7h2v5h-2z"/></svg>
-        </div>
-        <h3 className="text-lg font-bold text-gray-700 uppercase tracking-widest relative z-10">Health Risk Score</h3>
-        <div className="flex justify-center items-baseline mt-4 relative z-10">
-          <span className={`text-8xl font-black tracking-tighter ${getRiskColor(analysis.risk_score)}`}>
-            {analysis.risk_score}
-          </span>
-          {typeof analysis.risk_score === 'number' && (
-            <span className="text-4xl text-gray-400 font-bold ml-2">/100</span>
-          )}
-        </div>
-        <div className="mt-4 relative z-10">
-          <span className={`inline-block px-6 py-2 rounded-full text-xl font-black tracking-wide ${
-            typeof analysis.risk_score === 'number' ? (
-              analysis.risk_score < 50 ? 'bg-red-100 text-red-700' : 
-              analysis.risk_score < 80 ? 'bg-yellow-100 text-yellow-700' : 
-              'bg-green-100 text-green-700'
-            ) : 'bg-gray-200 text-gray-700'
-          }`}>
-            {getRiskLabel(analysis.risk_score)}
-          </span>
-        </div>
-      </div>
 
-      <div className="grid md:grid-cols-2 gap-8">
-        {/* Recommendation */}
-        <div className="bg-white/80 backdrop-blur-md p-8 rounded-3xl shadow-lg border border-gray-100 flex flex-col hover:shadow-xl transition-shadow duration-300">
-          <h3 className="text-2xl font-extrabold text-gray-800 mb-6 flex items-center">
-            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mr-4 shadow-sm text-blue-500">💡</div> 
-            Recommendation
-          </h3>
-          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 text-blue-900 p-6 rounded-2xl border border-blue-100/50 flex-grow font-medium text-lg leading-relaxed shadow-inner">
-            {analysis.recommendation}
-          </div>
+      {/* 1. OCR Status warning */}
+      {ocr_status === 'failed' && (
+        <div
+          className="p-4 rounded-[14px] text-sm"
+          style={{ backgroundColor: '#fef9c3', border: '0.5px solid #fde047', color: '#854d0e' }}
+        >
+          <strong>Peringatan:</strong> OCR gagal membaca kemasan. Hasil analisis mungkin tidak akurat. Coba upload foto yang lebih jelas dan terang.
         </div>
+      )}
 
-        {/* Nutrition Summary */}
-        <div className="bg-white/80 backdrop-blur-md p-8 rounded-3xl shadow-lg border border-gray-100 hover:shadow-xl transition-shadow duration-300">
-          <h3 className="text-2xl font-extrabold text-gray-800 mb-6 flex items-center">
-            <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center mr-4 shadow-sm text-purple-500">📊</div> 
-            Nutrition Facts
-          </h3>
-          <ul className="space-y-5">
-            <li className="flex justify-between items-center border-b border-gray-50 pb-4">
-              <span className="text-gray-500 font-semibold text-lg">Calories</span>
-              <span className="font-black text-gray-800 bg-gray-100/80 px-4 py-1.5 rounded-lg shadow-sm">{nutritionSummary?.calories ?? 0}</span>
-            </li>
-            <li className="flex justify-between items-center border-b border-gray-50 pb-4">
-              <span className="text-gray-500 font-semibold text-lg">Protein</span>
-              <span className="font-black text-gray-800 bg-gray-100/80 px-4 py-1.5 rounded-lg shadow-sm">{nutritionSummary?.protein ?? 0}</span>
-            </li>
-            <li className="flex justify-between items-center border-b border-gray-50 pb-4">
-              <span className="text-gray-500 font-semibold text-lg">Sugar</span>
-              <span className="font-black text-gray-800 bg-gray-100/80 px-4 py-1.5 rounded-lg shadow-sm">{nutritionSummary?.sugar ?? 0}</span>
-            </li>
-            <li className="flex justify-between items-center">
-              <span className="text-gray-500 font-semibold text-lg">Fat</span>
-              <span className="font-black text-gray-800 bg-gray-100/80 px-4 py-1.5 rounded-lg shadow-sm">{nutritionSummary?.fat ?? 0}</span>
-            </li>
-          </ul>
-        </div>
-      </div>
-
-      {/* Deep Analysis */}
-      <div className="bg-white/80 backdrop-blur-md p-10 rounded-3xl shadow-lg border border-gray-100 relative overflow-hidden group hover:shadow-xl transition-all duration-300">
-        <div className="absolute top-0 left-0 w-2 h-full bg-gradient-to-b from-green-400 to-emerald-600"></div>
-        <h3 className="text-2xl font-extrabold text-gray-800 mb-6 flex items-center">
-          <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center mr-4 shadow-sm text-emerald-500">🔬</div> 
-          Personalized Analysis
-        </h3>
-        <p className="text-gray-700 leading-relaxed text-lg font-medium">
-          {analysis.analysis}
+      {/* 2 & 3. Risk Score + Risk Level */}
+      <div
+        className="bg-white rounded-[14px] p-6 text-center"
+        style={{ border: `0.5px solid ${scoreColors.border}`, backgroundColor: scoreColors.bg }}
+      >
+        <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: scoreColors.text }}>
+          Skor Risiko Kesehatan
         </p>
+        <div className="text-7xl font-black mb-2" style={{ color: scoreColors.text }}>
+          {hasScore ? scoreNum : '—'}
+        </div>
+        {hasScore && (
+          <div
+            className="h-2 rounded-full overflow-hidden mx-auto mb-4"
+            style={{ backgroundColor: 'rgba(0,0,0,0.1)', maxWidth: '200px' }}
+          >
+            <div
+              className="h-full rounded-full transition-all duration-700"
+              style={{ width: `${Math.min(scoreNum, 100)}%`, backgroundColor: scoreColors.bar }}
+            />
+          </div>
+        )}
+        <span
+          className="inline-block px-4 py-1.5 rounded-full text-sm font-semibold"
+          style={{
+            backgroundColor: levelColors.bg,
+            color: levelColors.text,
+            border: `1px solid ${levelColors.border}`,
+          }}
+        >
+          {getRiskLevelLabel(analysis.risk_level)}
+        </span>
       </div>
 
-      {/* Alternatives */}
-      {analysis.alternatives && analysis.alternatives.length > 0 && (
-        <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-10 rounded-3xl shadow-lg border border-green-100/50">
-          <h3 className="text-2xl font-extrabold text-gray-800 mb-8 flex items-center">
-            <div className="w-10 h-10 rounded-full bg-green-200 flex items-center justify-center mr-4 shadow-sm text-green-600">✅</div> 
-            Better Alternatives
-          </h3>
-          <div className="flex flex-wrap gap-4">
-            {analysis.alternatives.map((alt, idx) => (
-              <span key={idx} className="bg-white border border-green-200/60 text-green-800 px-6 py-4 rounded-2xl font-bold shadow-sm hover:shadow-md transition-shadow duration-200 flex items-center">
-                <span className="text-green-500 mr-3 text-xl">✓</span> {alt}
-              </span>
+      {/* 4. Nutrition Summary */}
+      {visibleNutrition.length > 0 && (
+        <div className="bg-white rounded-[14px] p-6" style={{ border: '0.5px solid #d4e8c2' }}>
+          <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: '#639922' }}>
+            Informasi Nutrisi
+          </p>
+          <div className="grid grid-cols-3 gap-3">
+            {visibleNutrition.map(({ key, label, unit }) => (
+              <div
+                key={key}
+                className="rounded-xl p-3 text-center"
+                style={{ backgroundColor: '#f7faf4', border: '0.5px solid #d4e8c2' }}
+              >
+                <div className="text-base font-bold" style={{ color: '#27500A' }}>
+                  {ns[key]}
+                  <span className="text-xs font-normal ml-0.5" style={{ color: '#5F5E5A' }}>{unit}</span>
+                </div>
+                <div className="text-xs mt-0.5" style={{ color: '#5F5E5A' }}>{label}</div>
+              </div>
             ))}
           </div>
         </div>
       )}
+
+      {/* 5. Flagged Ingredients */}
+      <div className="bg-white rounded-[14px] p-6" style={{ border: '0.5px solid #d4e8c2' }}>
+        <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: '#639922' }}>
+          Bahan yang Perlu Diwaspadai
+        </p>
+        {!analysis.flagged_ingredients || analysis.flagged_ingredients.length === 0 ? (
+          <p className="text-sm font-medium" style={{ color: '#27500A' }}>
+            ✓ Tidak ada bahan berbahaya terdeteksi
+          </p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {analysis.flagged_ingredients.map((item, i) => (
+              <span
+                key={i}
+                className="px-3 py-1 rounded-full text-xs font-medium"
+                style={{ backgroundColor: '#fee2e2', color: '#991b1b', border: '0.5px solid #fca5a5' }}
+              >
+                {item}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* 6. Recommendation */}
+      {analysis.recommendation && (
+        <div className="bg-white rounded-[14px] p-6" style={{ border: '0.5px solid #d4e8c2' }}>
+          <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: '#639922' }}>
+            Rekomendasi
+          </p>
+          <p className="text-sm font-semibold" style={{ color: '#444441' }}>
+            {getRecommendationLabel(analysis.recommendation)}
+          </p>
+        </div>
+      )}
+
+      {/* 7. Analysis (Gemini) */}
+      {analysis.analysis && (
+        <div className="bg-white rounded-[14px] p-6" style={{ border: '0.5px solid #d4e8c2' }}>
+          <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: '#639922' }}>
+            Analisis Personal
+          </p>
+          <p className="text-sm leading-relaxed whitespace-pre-line" style={{ color: '#444441' }}>
+            {analysis.analysis}
+          </p>
+        </div>
+      )}
+
+      {/* 8. Alternatives */}
+      {analysis.alternatives && analysis.alternatives.length > 0 && (
+        <div className="bg-white rounded-[14px] p-6" style={{ border: '0.5px solid #d4e8c2' }}>
+          <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: '#639922' }}>
+            Alternatif Lebih Sehat
+          </p>
+          <ul className="space-y-2">
+            {analysis.alternatives.map((alt, i) => (
+              <li key={i} className="flex items-center gap-3 text-sm" style={{ color: '#444441' }}>
+                <div
+                  className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0"
+                  style={{ backgroundColor: '#EAF3DE', color: '#27500A' }}
+                >
+                  {i + 1}
+                </div>
+                {alt}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
     </div>
   );
 }

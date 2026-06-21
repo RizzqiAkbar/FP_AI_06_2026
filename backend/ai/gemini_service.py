@@ -5,6 +5,20 @@ import google.generativeai as genai
 
 from ai.prompts import get_analysis_prompt
 
+def _sanitize_ocr_text(ocr_text: str, product_name: str = "") -> str:
+    """Sanitize OCR text for Gemini by removing product and brand references."""
+    cleaned = ocr_text or ""
+
+    if product_name:
+        pattern = re.compile(re.escape(product_name), re.IGNORECASE)
+        cleaned = pattern.sub("this product", cleaned)
+
+    # Remove obvious product/brand lines and references
+    cleaned = re.sub(r"(?mi)^(product|brand|company|made by|distributed by)\s*[:\-].*$", "", cleaned)
+    cleaned = re.sub(r"(?mi)^(as\s+a[n]?\s+ai|as\s+an\s+assistant|as\s+nutria\s+ai).*", "", cleaned)
+    cleaned = re.sub(r"\n{2,}", "\n", cleaned)
+    return cleaned.strip()
+
 def get_gemini_analysis(
     parsed_nutrition,
     user_profile,
