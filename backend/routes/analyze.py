@@ -44,7 +44,7 @@ def analyze():
     saved_files = []
 
     try:
-        # === VALIDASI FILE ===
+        # === VALIDASI & SIMPAN FILE ===
         has_single = "image" in request.files
         has_multi = any(
             key in request.files
@@ -54,9 +54,7 @@ def analyze():
         if not has_single and not has_multi:
             return jsonify({"error": "Tidak ada gambar yang diupload"}), 400
 
-        # === PROSES UPLOAD & OCR ===
-        ocr_results = {}
-        ocr_status = "success"
+        image_paths = {}
 
         if has_multi:
             image_keys = {
@@ -65,7 +63,6 @@ def analyze():
                 "front_image": "front",
             }
 
-            image_paths = {}
             for form_key, result_key in image_keys.items():
                 if form_key in request.files:
                     file = request.files[form_key]
@@ -81,11 +78,6 @@ def analyze():
             if not image_paths:
                 return jsonify({"error": "Tidak ada file valid yang diupload"}), 400
 
-            ocr_results = extract_text_from_multiple(image_paths)
-
-            if all(not v for v in ocr_results.values()):
-                ocr_status = "failed"
-
         else:
             file = request.files["image"]
 
@@ -99,17 +91,7 @@ def analyze():
 
             filepath = save_upload(file, upload_folder)
             saved_files.append(filepath)
-
-            text = extract_text(filepath)
-
-            if not text:
-                ocr_status = "failed"
-                ocr_results = {"single": ""}
-            else:
-                ocr_results = {"single": text}
-
-        # === PARSE DATA NUTRISI ===
-        parsed_data = combine_ocr_results(ocr_results)
+            image_paths = {"single": filepath}
 
         # === AMBIL DATA PROFIL USER ===
         import json
@@ -119,81 +101,164 @@ def analyze():
         except Exception:
             user_profile = {}
         
-        # Format for risk score (needs a single string representing condition, or default normal)
         health_cond_str = "normal"
         conditions = user_profile.get("conditions", [])
         if conditions and len(conditions) > 0:
             health_cond_str = conditions[0]
+        else:
+            # Fallback to single condition string in case user profile is structured differently
+            health_cond_str = user_profile.get("health_condition", "normal")
 
-        # === AI INTEGRATION ===
-        from utils.cache import generate_cache_key, get_cached_analysis, set_cached_analysis
-        from ai.recomendation import generate_local_recommendation
+        # === CHECK CACHE FIRST (BY IMAGE HASH) ===
+        from utils.cache import (
+            calculate_multiple_files_hash, 
+            generate_image_cache_key, 
+            get_cached_analysis, 
+            set_cached_analysis
+        )
         
-        cache_key = generate_cache_key(parsed_data.get("combined_text", ""), user_profile)
+        image_hash = calculate_multiple_files_hash(image_paths)
+        cache_key = generate_image_cache_key(image_hash, user_profile)
         cached_result = get_cached_analysis(cache_key)
         
-        if cached_result:
-            print("[analyze] Using cached analysis result")
-            analysis_section = cached_result
+        if cached_result and isinstance(cached_result, dict) and "analysis" in cached_result:
+            print("[analyze] Cache hit (image hash). Returning cached results.")
+            return jsonify({
+                "success": True,
+                "ocr_status": cached_result.get("ocr_status", "success"),
+                "ocr_text": cached_result.get("ocr_text", ""),
+                "product_name": cached_result.get("product_name", ""),
+                "user_profile": user_profile,
+                "analysis": cached_result.get("analysis")
+            }), 200
+
+        # === PROSES UTAMA: GEMINI VISION ===
+        from ai.gemini_service import get_gemini_multimodal_analysis
+        
+        ocr_status = "success"
+        ocr_text = ""
+        product_name = ""
+        nutrition_data = {}
+        ingredients = []
+        analysis_text = ""
+        
+        gemini_vision_res = None
+        if os.getenv("GEMINI_API_KEY"):
+            print("[analyze] Attempting Gemini Multimodal Vision analysis...")
+            gemini_vision_res = get_gemini_multimodal_analysis(image_paths, user_profile)
+            
+        if gemini_vision_res:
+            print("[analyze] Gemini Vision analysis successful.")
+            product_name = gemini_vision_res.get("product_name", "")
+            nutrition_data = gemini_vision_res.get("nutrition_data", {}) or {}
+            ingredients = gemini_vision_res.get("ingredients", []) or []
+            analysis_text = gemini_vision_res.get("analysis", "")
+            
+            # Reconstruct combined OCR text from nutrition_data and ingredients for frontend display
+            lines = []
+            if product_name:
+                lines.append(f"Product Name: {product_name}")
+            if nutrition_data:
+                lines.append("\n[Nutrition Facts]")
+                for k, v in nutrition_data.items():
+                    lines.append(f"{k}: {v}")
+            if ingredients:
+                lines.append("\n[Ingredients]")
+                lines.append(", ".join(ingredients))
+            ocr_text = "\n".join(lines)
         else:
-            risk = calculate_risk_score(parsed_data.get("nutrition_data", {}), health_cond_str)
-            flagged = check_ingredients(parsed_data.get("combined_text", ""))
+            # === FALLBACK: TESSERACT + LOCAL PARSER ===
+            print("[analyze] Gemini Vision unavailable or failed. Falling back to local Tesseract OCR...")
+            
+            if has_multi:
+                ocr_results = extract_text_from_multiple(image_paths)
+                if all(not v for v in ocr_results.values()):
+                    ocr_status = "failed"
+            else:
+                text = extract_text(image_paths.get("single", ""))
+                if not text:
+                    ocr_status = "failed"
+                    ocr_results = {"single": ""}
+                else:
+                    ocr_results = {"single": text}
+            
+            parsed_data = combine_ocr_results(ocr_results)
+            ocr_text = parsed_data.get("combined_text", "")
+            product_name = parsed_data.get("product_name", "")
+            nutrition_data = parsed_data.get("nutrition_data", {})
+            ingredients = parsed_data.get("ingredients", [])
+            
+            # Run text-only analysis via Gemini (or local fallback)
+            risk = calculate_risk_score(nutrition_data, health_cond_str)
+            flagged = check_ingredients(ocr_text)
             
             ai_result = get_gemini_analysis(
-                parsed_data.get("nutrition_data", {}),
+                nutrition_data,
                 user_profile,
                 risk["score"],
                 risk["risk_level"],
                 flagged
             )
-            
-            alternatives = get_alternative_foods(
-                parsed_data.get("product_name", "unknown"),
-                health_cond_str
-            )
-            
-            recommendation = generate_local_recommendation(
-                risk["risk_level"], 
-                health_cond_str, 
-                user_profile.get("goal", "general health")
-            )
-    
-            # Log OCR and AI results for debugging
-            print("[analyze] OCR text length:", len(parsed_data.get("combined_text", "")))
-            print("[analyze] AI result:", ai_result)
-    
-            # === BUILD RESPONSE ===
-            analysis_section = {
-                "nutrition_summary": parsed_data.get("nutrition_data", {}),
-                "risk_score": risk["score"],
-                "risk_level": risk["risk_level"],
-                "flagged_ingredients": flagged,
-                "analysis": ai_result.get("analysis", ""),
-                "recommendation": recommendation,
-                "alternatives": alternatives
-            }
-    
-            # If AI returned an error (e.g., missing API key), surface it to frontend
-            if isinstance(ai_result, dict) and ai_result.get("error"):
-                analysis_section["error"] = ai_result.get("error")
-                
-            set_cached_analysis(cache_key, analysis_section)
+            analysis_text = ai_result.get("analysis", "")
 
+        # === DETERMINISTIC LOCAL CALCULATIONS ===
+        risk = calculate_risk_score(nutrition_data, health_cond_str)
+        
+        # If ingredients list is a list, join it
+        ingredients_str = ", ".join(ingredients) if isinstance(ingredients, list) else str(ingredients)
+        flagged = check_ingredients(ingredients_str or ocr_text)
+        
+        alternatives = get_alternative_foods(
+            product_name or "unknown",
+            health_cond_str
+        )
+        
+        from ai.recomendation import generate_local_recommendation
+        recommendation = generate_local_recommendation(
+            risk["risk_level"], 
+            health_cond_str, 
+            user_profile.get("goal", "general health")
+        )
+        
+        # === BUILD RESPONSE & SAVE CACHE ===
+        analysis_section = {
+            "nutrition_summary": nutrition_data,
+            "risk_score": risk["score"],
+            "risk_level": risk["risk_level"],
+            "flagged_ingredients": flagged,
+            "analysis": analysis_text,
+            "recommendation": recommendation,
+            "alternatives": alternatives
+        }
+        
+        # If there was an error in fallback ai_result, keep it
+        if not gemini_vision_res and 'ai_result' in locals() and isinstance(ai_result, dict) and ai_result.get("error"):
+            analysis_section["error"] = ai_result.get("error")
+
+        response_payload = {
+            "ocr_status": ocr_status,
+            "ocr_text": ocr_text,
+            "product_name": product_name,
+            "analysis": analysis_section
+        }
+        
+        set_cached_analysis(cache_key, response_payload)
+        
         response = {
             "success": True,
             "ocr_status": ocr_status,
-            "ocr_text": parsed_data.get("combined_text", ""),
-            "product_name": parsed_data.get("product_name", ""),
+            "ocr_text": ocr_text,
+            "product_name": product_name,
             "user_profile": user_profile,
             "analysis": analysis_section
         }
-
+        
         if ocr_status == "failed":
             response["message"] = (
                 "Could not extract nutrition data from image. "
                 "Please retake photo with better lighting and focus."
             )
-
+            
         return jsonify(response), 200
 
     except Exception as e:
@@ -227,93 +292,164 @@ def upload():
         return jsonify({"error": "Format file tidak didukung"}), 400
 
     filepath = save_upload(file, upload_folder)
+    image_paths = {"single": filepath}
 
     try:
-        text = extract_text(filepath)
-
-        if not text:
-            return jsonify({
-                "success": True,
-                "ocr_status": "failed",
-                "ocr_text": "",
-                "nutrition_data": {},
-                "ingredients": [],
-                "message": "Could not extract nutrition data from image.",
-            }), 200
-
-        nutrition_data = parse_nutrition(text)
-        ingredients = parse_ingredients(text)
-
-        # Optionally run AI analysis when user_profile provided or ai=true
+        # Load user profile from request if present
+        import json
         user_profile = {}
-        ai_section = None
         try:
-            import json
             user_profile_str = request.form.get("user_profile", "")
             if user_profile_str:
                 user_profile = json.loads(user_profile_str)
         except Exception:
             user_profile = {}
 
+        # Pre-cache check by image hash
+        from utils.cache import (
+            calculate_multiple_files_hash, 
+            generate_image_cache_key, 
+            get_cached_analysis, 
+            set_cached_analysis
+        )
+        
+        image_hash = calculate_multiple_files_hash(image_paths)
+        cache_key = generate_image_cache_key(image_hash, user_profile)
+        cached_result = get_cached_analysis(cache_key)
+
+        # Determine if we need to run AI
         run_ai = request.form.get("ai", "false").lower() == "true" or bool(user_profile)
 
-        if run_ai:
-            try:
-                from utils.cache import generate_cache_key, get_cached_analysis, set_cached_analysis
+        # If cache hit and format matches
+        if cached_result and isinstance(cached_result, dict):
+            # If they asked for AI and cache contains analysis, OR they didn't ask for AI
+            has_cached_analysis = "analysis" in cached_result
+            if (run_ai and has_cached_analysis) or (not run_ai):
+                print("[upload] Cache hit. Returning cached results.")
+                response = {
+                    "success": True,
+                    "ocr_status": cached_result.get("ocr_status", "success"),
+                    "ocr_text": cached_result.get("ocr_text", ""),
+                    "nutrition_data": cached_result.get("analysis", {}).get("nutrition_summary", {}) if has_cached_analysis else cached_result.get("nutrition_data", {}),
+                    "ingredients": cached_result.get("analysis", {}).get("flagged_ingredients", []) if has_cached_analysis else cached_result.get("ingredients", []),
+                }
+                if run_ai and has_cached_analysis:
+                    response["analysis"] = cached_result.get("analysis")
+                return jsonify(response), 200
+
+        # Run vision analysis first if Gemini API is available
+        ocr_status = "success"
+        ocr_text = ""
+        product_name = ""
+        nutrition_data = {}
+        ingredients = []
+        ai_section = None
+
+        from ai.gemini_service import get_gemini_multimodal_analysis
+        
+        gemini_vision_res = None
+        if os.getenv("GEMINI_API_KEY"):
+            print("[upload] Attempting Gemini Multimodal Vision analysis...")
+            gemini_vision_res = get_gemini_multimodal_analysis(image_paths, user_profile)
+
+        if gemini_vision_res:
+            print("[upload] Gemini Vision successful.")
+            product_name = gemini_vision_res.get("product_name", "")
+            nutrition_data = gemini_vision_res.get("nutrition_data", {}) or {}
+            ingredients = gemini_vision_res.get("ingredients", []) or []
+            analysis_text = gemini_vision_res.get("analysis", "")
+            
+            # Reconstruct OCR text
+            lines = []
+            if product_name:
+                lines.append(f"Product Name: {product_name}")
+            if nutrition_data:
+                lines.append("\n[Nutrition Facts]")
+                for k, v in nutrition_data.items():
+                    lines.append(f"{k}: {v}")
+            if ingredients:
+                lines.append("\n[Ingredients]")
+                lines.append(", ".join(ingredients))
+            ocr_text = "\n".join(lines)
+            
+            if run_ai:
+                health_cond_str = user_profile.get("conditions", ["normal"])[0] if user_profile else "normal"
+                risk = calculate_risk_score(nutrition_data, health_cond_str)
+                flagged = check_ingredients(", ".join(ingredients))
+                
                 from ai.recomendation import generate_local_recommendation
+                recommendation = generate_local_recommendation(
+                    risk["risk_level"], 
+                    health_cond_str, 
+                    user_profile.get("goal", "general health") if user_profile else "general health"
+                )
                 
-                cache_key = generate_cache_key(text, user_profile)
-                cached_result = get_cached_analysis(cache_key)
+                ai_section = {
+                    "nutrition_summary": nutrition_data,
+                    "risk_score": risk["score"],
+                    "risk_level": risk["risk_level"],
+                    "flagged_ingredients": flagged,
+                    "analysis": analysis_text,
+                    "recommendation": recommendation,
+                    "alternatives": get_alternative_foods(product_name or "unknown", health_cond_str),
+                }
+        else:
+            # Fallback to Tesseract
+            print("[upload] Gemini Vision failed/unavailable. Falling back to local Tesseract OCR...")
+            ocr_text = extract_text(filepath)
+            if not ocr_text:
+                ocr_status = "failed"
+            nutrition_data = parse_nutrition(ocr_text)
+            ingredients = parse_ingredients(ocr_text)
+
+            if run_ai:
+                health_cond_str = user_profile.get("conditions", ["normal"])[0] if user_profile else "normal"
+                risk = calculate_risk_score(nutrition_data, health_cond_str)
+                flagged = check_ingredients(ocr_text)
+
+                ai_result = get_gemini_analysis(
+                    nutrition_data,
+                    user_profile,
+                    risk["score"],
+                    risk["risk_level"],
+                    flagged,
+                )
                 
-                if cached_result:
-                    print("[upload] Using cached analysis result")
-                    ai_section = cached_result
-                else:
-                    health_cond_str = user_profile.get("conditions", ["normal"])[0] if user_profile else "normal"
-                    risk = calculate_risk_score(nutrition_data, health_cond_str)
-                    flagged = check_ingredients(text)
-    
-                    ai_result = get_gemini_analysis(
-                        nutrition_data,
-                        user_profile,
-                        risk["score"],
-                        risk["risk_level"],
-                        flagged,
-                    )
-                    
-                    recommendation = generate_local_recommendation(
-                        risk["risk_level"], 
-                        health_cond_str, 
-                        user_profile.get("goal", "general health") if user_profile else "general health"
-                    )
-                    
-                    alternatives = get_alternative_foods(
-                        "unknown",
-                        health_cond_str
-                    )
-    
-                    analysis_section = {
-                        "nutrition_summary": nutrition_data,
-                        "risk_score": risk["score"],
-                        "risk_level": risk["risk_level"],
-                        "flagged_ingredients": flagged,
-                        "analysis": ai_result.get("analysis", "") if isinstance(ai_result, dict) else "",
-                        "recommendation": recommendation,
-                        "alternatives": alternatives,
-                    }
-    
-                    if isinstance(ai_result, dict) and ai_result.get("error"):
-                        analysis_section["error"] = ai_result.get("error")
-    
-                    ai_section = analysis_section
-                    set_cached_analysis(cache_key, analysis_section)
-            except Exception as e:
-                print("[upload] AI error:", e)
+                from ai.recomendation import generate_local_recommendation
+                recommendation = generate_local_recommendation(
+                    risk["risk_level"], 
+                    health_cond_str, 
+                    user_profile.get("goal", "general health") if user_profile else "general health"
+                )
+
+                ai_section = {
+                    "nutrition_summary": nutrition_data,
+                    "risk_score": risk["score"],
+                    "risk_level": risk["risk_level"],
+                    "flagged_ingredients": flagged,
+                    "analysis": ai_result.get("analysis", "") if isinstance(ai_result, dict) else "",
+                    "recommendation": recommendation,
+                    "alternatives": get_alternative_foods(product_name or "unknown", health_cond_str),
+                }
+                if isinstance(ai_result, dict) and ai_result.get("error"):
+                    ai_section["error"] = ai_result.get("error")
+
+        # Save to cache
+        cache_payload = {
+            "ocr_status": ocr_status,
+            "ocr_text": ocr_text,
+            "nutrition_data": nutrition_data,
+            "ingredients": ingredients,
+        }
+        if ai_section is not None:
+            cache_payload["analysis"] = ai_section
+        
+        set_cached_analysis(cache_key, cache_payload)
 
         response = {
             "success": True,
-            "ocr_status": "success",
-            "ocr_text": text,
+            "ocr_status": ocr_status,
+            "ocr_text": ocr_text,
             "nutrition_data": nutrition_data,
             "ingredients": ingredients,
         }

@@ -23,6 +23,42 @@ def init_db():
         if 'conn' in locals():
             conn.close()
 
+def calculate_file_hash(filepath: str) -> str:
+    """Calculate MD5 hash of a file."""
+    if not filepath or not os.path.exists(filepath):
+        return ""
+    hasher = hashlib.md5()
+    try:
+        with open(filepath, 'rb') as f:
+            buf = f.read(65536)
+            while len(buf) > 0:
+                hasher.update(buf)
+                buf = f.read(65536)
+        return hasher.hexdigest()
+    except Exception as e:
+        print(f"Error calculating file hash: {e}")
+        return ""
+
+def calculate_multiple_files_hash(image_paths: dict) -> str:
+    """Calculate combined MD5 hash of multiple image files."""
+    hashes = []
+    for key in sorted(image_paths.keys()):
+        filepath = image_paths[key]
+        if filepath:
+            file_hash = calculate_file_hash(filepath)
+            if file_hash:
+                hashes.append(f"{key}:{file_hash}")
+    if not hashes:
+        return ""
+    combined = "|".join(hashes)
+    return hashlib.md5(combined.encode('utf-8')).hexdigest()
+
+def generate_image_cache_key(image_hash: str, user_profile: dict) -> str:
+    """Generate a unique MD5 hash for the image hash and user profile."""
+    profile_str = json.dumps(user_profile, sort_keys=True)
+    raw_str = f"img:{image_hash}|profile:{profile_str}"
+    return hashlib.md5(raw_str.encode('utf-8')).hexdigest()
+
 def generate_cache_key(ocr_text: str, user_profile: dict) -> str:
     """Generate a unique MD5 hash for the given input."""
     # Ensure consistent ordering for dict
