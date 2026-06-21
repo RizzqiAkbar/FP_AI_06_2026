@@ -40,12 +40,6 @@ FLAGGED INGREDIENTS:
 
 Provide ONLY valid JSON with this exact structure:
 {{
-    "analysis": "Personalized explanation",
-    "recommendation": "Provide a Safe to consume / Consume occasionally / Avoid, a personalized why, and a safe amount of consumption for this product (2-3 sentences) based on the user's profile and goals, avoiding repetition of the main analysis.",
-    "alternatives": [
-        "Alternative 1",
-        "Alternative 2",
-        "Alternative 3"
-    ]
+    "analysis": "Personalized explanation (2-3 paragraphs) of the nutritional value and its impact on the user based on their profile, health condition, and flagged ingredients."
 }}
 """

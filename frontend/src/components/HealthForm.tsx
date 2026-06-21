@@ -218,7 +218,7 @@ export default function HealthForm({ onSave }: HealthFormProps = {}) {
             </label>
             <input
               type="text"
-              value={profile.health_condition}
+              value={profile.health_condition || ''}
               onChange={e => setProfile(p => ({ ...p, health_condition: e.target.value }))}
               placeholder="Contoh: diabetes ringan, sering pusing saat makan manis"
               className="w-full px-4 py-3 rounded-xl text-sm outline-none"

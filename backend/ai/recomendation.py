@@ -30,3 +30,22 @@ def get_alternative_foods(product_type, health_condition="normal"):
         alternatives = ["Fresh Fruits", "Vegetable Sticks", "Greek Yogurt", "Nuts and Seeds"]
 
     return alternatives
+
+def generate_local_recommendation(risk_level, health_condition="normal", goal="general health"):
+    """
+    Generate a recommendation locally based on risk level and user profile.
+    """
+    risk = risk_level.lower()
+    
+    if "high" in risk or "tinggi" in risk:
+        rec = "Sangat disarankan untuk menghindari produk ini atau konsumsi dalam jumlah yang sangat terbatas."
+        if health_condition != "normal":
+            rec += f" Terutama karena Anda memiliki kondisi {health_condition}, produk ini dapat memperburuk kondisi Anda."
+    elif "moderate" in risk or "medium" in risk or "sedang" in risk:
+        rec = "Produk ini bisa dikonsumsi sesekali dalam porsi wajar, namun jangan dijadikan konsumsi harian utama."
+        if goal == "weight_loss" or goal == "menurunkan berat badan":
+            rec += " Perhatikan porsi konsumsi agar target penurunan berat badan tetap tercapai."
+    else:
+        rec = "Produk ini tergolong aman untuk dikonsumsi dalam batas wajar sesuai anjuran porsi."
+        
+    return rec

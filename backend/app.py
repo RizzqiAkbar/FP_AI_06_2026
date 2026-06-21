@@ -12,6 +12,10 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
 
+    # Initialize cache DB
+    from utils.cache import init_db
+    init_db()
+
     # Enable CORS for frontend integration
     CORS(app, resources={r"/api/*": {"origins": "*"}})
 

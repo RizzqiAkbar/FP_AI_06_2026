@@ -19,6 +19,29 @@ def _sanitize_ocr_text(ocr_text: str, product_name: str = "") -> str:
     cleaned = re.sub(r"\n{2,}", "\n", cleaned)
     return cleaned.strip()
 
+def _generate_local_fallback_analysis(parsed_nutrition, risk_level, flagged_ingredients):
+    """Generate a rule-based analysis string when Gemini is unavailable."""
+    analysis = []
+    analysis.append("Mode Offline Aktif. Analisis berikut dihasilkan oleh sistem lokal secara otomatis karena layanan AI sedang tidak tersedia.")
+    
+    if risk_level.lower() == "high" or "tinggi" in risk_level.lower():
+        analysis.append("Berdasarkan profil Anda dan informasi nutrisi yang ditemukan, produk ini memiliki risiko tinggi untuk dikonsumsi. Harap perhatikan secara ekstra.")
+    elif risk_level.lower() == "moderate" or "sedang" in risk_level.lower():
+        analysis.append("Produk ini memiliki risiko sedang. Anda masih bisa mengonsumsinya namun dalam batas yang wajar.")
+    else:
+        analysis.append("Secara umum produk ini memiliki profil nutrisi yang aman untuk dikonsumsi dalam jumlah normal.")
+        
+    if flagged_ingredients:
+        analysis.append(f"Perhatian khusus terhadap bahan berikut: {', '.join(flagged_ingredients)}. Bahan-bahan ini mungkin perlu dihindari tergantung kondisi kesehatan spesifik Anda.")
+        
+    if parsed_nutrition:
+        cals = parsed_nutrition.get('calories')
+        sugar = parsed_nutrition.get('sugar')
+        if cals: analysis.append(f"Kalori produk ini adalah {cals}.")
+        if sugar: analysis.append(f"Kandungan gula tercatat sebesar {sugar}.")
+        
+    return {"analysis": " ".join(analysis)}
+
 def get_gemini_analysis(
     parsed_nutrition,
     user_profile,
@@ -26,19 +49,14 @@ def get_gemini_analysis(
     risk_level,
     flagged_ingredients
 ):
-
     api_key = os.getenv("GEMINI_API_KEY")
 
     if not api_key:
-        return {
-            "error": "Missing GEMINI_API_KEY"
-        }
+        print("Missing GEMINI_API_KEY. Using local fallback.")
+        return _generate_local_fallback_analysis(parsed_nutrition, risk_level, flagged_ingredients)
 
     genai.configure(api_key=api_key)
-
-    model = genai.GenerativeModel(
-        "gemini-3.1-flash-lite"
-    )
+    model = genai.GenerativeModel("gemini-3.1-flash-lite")
 
     prompt = get_analysis_prompt(
         parsed_nutrition,
@@ -49,29 +67,16 @@ def get_gemini_analysis(
     )
 
     try:
-
-        response = model.generate_content(
-            prompt
-        )
-
+        response = model.generate_content(prompt)
         text = response.text.strip()
 
         if text.startswith("```json"):
             text = text[7:]
-
         if text.endswith("```"):
             text = text[:-3]
 
         return json.loads(text.strip())
 
     except Exception as e:
-
         print(f"Gemini Error: {e}")
-
-        return {
-            "analysis":
-                "Unable to generate analysis.",
-            "recommendation":
-                "Review nutrition information manually.",
-            "alternatives": []
-        }
+        return _generate_local_fallback_analysis(parsed_nutrition, risk_level, flagged_ingredients)

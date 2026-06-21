@@ -1,7 +1,7 @@
 from ai.risk_score import calculate_risk_score
 from ai.ingredient_checker import check_ingredients
 from ai.gemini_service import get_gemini_analysis
-from ai.recomendation import get_alternative_foods
+from ai.recomendation import get_alternative_foods, generate_local_recommendation
 
 
 def analyze_food(
@@ -15,6 +15,7 @@ def analyze_food(
         "health_condition",
         "normal"
     )
+    goal = user_profile.get("goal", "general health")
 
     risk = calculate_risk_score(
         nutrition_data,
@@ -26,7 +27,7 @@ def analyze_food(
     )
 
     ai_result = get_gemini_analysis(
-        ocr_text,
+        nutrition_data,
         user_profile,
         risk["score"],
         risk["risk_level"],
@@ -36,6 +37,12 @@ def analyze_food(
     alternatives = get_alternative_foods(
         product_type,
         health_condition
+    )
+    
+    recommendation = generate_local_recommendation(
+        risk["risk_level"],
+        health_condition,
+        goal
     )
 
     return {
@@ -59,14 +66,8 @@ def analyze_food(
             ),
 
         "recommendation":
-            ai_result.get(
-                "recommendation",
-                ""
-            ),
+            recommendation,
 
         "alternatives":
-            ai_result.get(
-                "alternatives",
-                alternatives
-            )
+            alternatives
     }

@@ -126,40 +126,58 @@ def analyze():
             health_cond_str = conditions[0]
 
         # === AI INTEGRATION ===
-        risk = calculate_risk_score(parsed_data.get("nutrition_data", {}), health_cond_str)
-        flagged = check_ingredients(parsed_data.get("combined_text", ""))
+        from utils.cache import generate_cache_key, get_cached_analysis, set_cached_analysis
+        from ai.recomendation import generate_local_recommendation
         
-        ai_result = get_gemini_analysis(
-            parsed_data.get("nutrition_data", {}),
-            user_profile,
-            risk["score"],
-            risk["risk_level"],
-            flagged
-        )
+        cache_key = generate_cache_key(parsed_data.get("combined_text", ""), user_profile)
+        cached_result = get_cached_analysis(cache_key)
         
-        alternatives = get_alternative_foods(
-            parsed_data.get("product_name", "unknown"),
-            health_cond_str
-        )
-
-        # Log OCR and AI results for debugging
-        print("[analyze] OCR text length:", len(parsed_data.get("combined_text", "")))
-        print("[analyze] AI result:", ai_result)
-
-        # === BUILD RESPONSE ===
-        analysis_section = {
-            "nutrition_summary": parsed_data.get("nutrition_data", {}),
-            "risk_score": risk["score"],
-            "risk_level": risk["risk_level"],
-            "flagged_ingredients": flagged,
-            "analysis": ai_result.get("analysis", ""),
-            "recommendation": ai_result.get("recommendation", ""),
-            "alternatives": ai_result.get("alternatives", alternatives)
-        }
-
-        # If AI returned an error (e.g., missing API key), surface it to frontend
-        if isinstance(ai_result, dict) and ai_result.get("error"):
-            analysis_section["error"] = ai_result.get("error")
+        if cached_result:
+            print("[analyze] Using cached analysis result")
+            analysis_section = cached_result
+        else:
+            risk = calculate_risk_score(parsed_data.get("nutrition_data", {}), health_cond_str)
+            flagged = check_ingredients(parsed_data.get("combined_text", ""))
+            
+            ai_result = get_gemini_analysis(
+                parsed_data.get("nutrition_data", {}),
+                user_profile,
+                risk["score"],
+                risk["risk_level"],
+                flagged
+            )
+            
+            alternatives = get_alternative_foods(
+                parsed_data.get("product_name", "unknown"),
+                health_cond_str
+            )
+            
+            recommendation = generate_local_recommendation(
+                risk["risk_level"], 
+                health_cond_str, 
+                user_profile.get("goal", "general health")
+            )
+    
+            # Log OCR and AI results for debugging
+            print("[analyze] OCR text length:", len(parsed_data.get("combined_text", "")))
+            print("[analyze] AI result:", ai_result)
+    
+            # === BUILD RESPONSE ===
+            analysis_section = {
+                "nutrition_summary": parsed_data.get("nutrition_data", {}),
+                "risk_score": risk["score"],
+                "risk_level": risk["risk_level"],
+                "flagged_ingredients": flagged,
+                "analysis": ai_result.get("analysis", ""),
+                "recommendation": recommendation,
+                "alternatives": alternatives
+            }
+    
+            # If AI returned an error (e.g., missing API key), surface it to frontend
+            if isinstance(ai_result, dict) and ai_result.get("error"):
+                analysis_section["error"] = ai_result.get("error")
+                
+            set_cached_analysis(cache_key, analysis_section)
 
         response = {
             "success": True,
@@ -241,32 +259,54 @@ def upload():
 
         if run_ai:
             try:
-                # re-use risk calculation and ingredient checks from full analyze flow
-                risk = calculate_risk_score(nutrition_data, user_profile.get("conditions", ["normal"])[0] if user_profile else "normal")
-                flagged = check_ingredients(text)
-
-                ai_result = get_gemini_analysis(
-                    nutrition_data,
-                    user_profile,
-                    risk["score"],
-                    risk["risk_level"],
-                    flagged,
-                )
-
-                analysis_section = {
-                    "nutrition_summary": nutrition_data,
-                    "risk_score": risk["score"],
-                    "risk_level": risk["risk_level"],
-                    "flagged_ingredients": flagged,
-                    "analysis": ai_result.get("analysis", "") if isinstance(ai_result, dict) else "",
-                    "recommendation": ai_result.get("recommendation", "") if isinstance(ai_result, dict) else "",
-                    "alternatives": ai_result.get("alternatives", []) if isinstance(ai_result, dict) else [],
-                }
-
-                if isinstance(ai_result, dict) and ai_result.get("error"):
-                    analysis_section["error"] = ai_result.get("error")
-
-                ai_section = analysis_section
+                from utils.cache import generate_cache_key, get_cached_analysis, set_cached_analysis
+                from ai.recomendation import generate_local_recommendation
+                
+                cache_key = generate_cache_key(text, user_profile)
+                cached_result = get_cached_analysis(cache_key)
+                
+                if cached_result:
+                    print("[upload] Using cached analysis result")
+                    ai_section = cached_result
+                else:
+                    health_cond_str = user_profile.get("conditions", ["normal"])[0] if user_profile else "normal"
+                    risk = calculate_risk_score(nutrition_data, health_cond_str)
+                    flagged = check_ingredients(text)
+    
+                    ai_result = get_gemini_analysis(
+                        nutrition_data,
+                        user_profile,
+                        risk["score"],
+                        risk["risk_level"],
+                        flagged,
+                    )
+                    
+                    recommendation = generate_local_recommendation(
+                        risk["risk_level"], 
+                        health_cond_str, 
+                        user_profile.get("goal", "general health") if user_profile else "general health"
+                    )
+                    
+                    alternatives = get_alternative_foods(
+                        "unknown",
+                        health_cond_str
+                    )
+    
+                    analysis_section = {
+                        "nutrition_summary": nutrition_data,
+                        "risk_score": risk["score"],
+                        "risk_level": risk["risk_level"],
+                        "flagged_ingredients": flagged,
+                        "analysis": ai_result.get("analysis", "") if isinstance(ai_result, dict) else "",
+                        "recommendation": recommendation,
+                        "alternatives": alternatives,
+                    }
+    
+                    if isinstance(ai_result, dict) and ai_result.get("error"):
+                        analysis_section["error"] = ai_result.get("error")
+    
+                    ai_section = analysis_section
+                    set_cached_analysis(cache_key, analysis_section)
             except Exception as e:
                 print("[upload] AI error:", e)
 
