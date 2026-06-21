@@ -40,9 +40,9 @@ const getRecommendationLabel = (rec: string) => {
 const getRiskScoreColors = (score: number | string) => {
   const n = Number(score);
   if (isNaN(n)) return { bg: '#f7faf4', text: '#5F5E5A', bar: '#d4e8c2', border: '#d4e8c2' };
-  if (n <= 30) return { bg: '#EAF3DE', text: '#27500A', bar: '#639922', border: '#C0DD97' };
-  if (n <= 60) return { bg: '#fef9c3', text: '#854d0e', bar: '#f59e0b', border: '#fde047' };
-  return { bg: '#fee2e2', text: '#991b1b', bar: '#ef4444', border: '#fca5a5' };
+  if (n >= 80) return { bg: '#22c55e', text: '#ffffff', bar: '#ffffff', border: '#16a34a' };
+  if (n >= 50) return { bg: '#eab308', text: '#ffffff', bar: '#ffffff', border: '#ca8a04' };
+  return { bg: '#ef4444', text: '#ffffff', bar: '#ffffff', border: '#dc2626' };
 };
 
 const getRiskLevelColors = (level: string) => {
@@ -98,7 +98,7 @@ export default function ResultCard({ result, onScanAnother }: ResultCardProps) {
 
       {/* 2 & 3. Risk Score + Risk Level */}
       <div
-        className="bg-white rounded-[14px] p-6 text-center"
+        className="rounded-[14px] p-6 text-center"
         style={{ border: `0.5px solid ${scoreColors.border}`, backgroundColor: scoreColors.bg }}
       >
         <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: scoreColors.text }}>

@@ -15,9 +15,8 @@ export default function Navbar() {
           <div className="flex justify-between items-center h-16">
 
             {/* Logo */}
-            <Link href="/" className="text-[18px]" style={{ fontWeight: 500 }}>
-              <span style={{ color: '#27500A' }}>Nutri</span>
-              <span style={{ color: '#639922' }}>a</span>
+            <Link href="/" className="flex items-center">
+              <img src="/nutria-text.png" alt="Nutria" className="h-8 w-auto" />
             </Link>
 
             {/* Desktop nav links */}

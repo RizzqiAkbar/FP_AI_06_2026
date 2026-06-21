@@ -10,6 +10,11 @@ export default function Hero() {
     >
       <div className="max-w-2xl mx-auto text-center">
 
+        {/* Hero Logo */}
+        <div className="flex justify-center mb-6">
+          <img src="/nutria.png" alt="Nutria Logo" className="h-16 md:h-24 w-auto object-contain" />
+        </div>
+
         {/* Badge */}
         <div
           className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium mb-8"

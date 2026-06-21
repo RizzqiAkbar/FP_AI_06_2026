@@ -33,7 +33,7 @@ export default function Home() {
               </div>
               <h3 className="font-semibold text-base mb-2" style={{ color: '#27500A' }}>Scan Cerdas</h3>
               <p className="text-sm leading-relaxed" style={{ color: '#5F5E5A' }}>
-                OCR otomatis membaca nutrition facts dari foto kemasan dengan akurasi tinggi — tidak perlu ketik manual.
+                OCR otomatis membaca nutrition facts dari foto kemasan dengan akurasi tinggi, jadi tidak perlu repot ketik manual.
               </p>
             </div>
 
@@ -45,7 +45,7 @@ export default function Home() {
               </div>
               <h3 className="font-semibold text-base mb-2" style={{ color: '#27500A' }}>Analisis Personal</h3>
               <p className="text-sm leading-relaxed" style={{ color: '#5F5E5A' }}>
-                Hasil analisis disesuaikan dengan kondisi kesehatanmu — diabetes, hipertensi, kolesterol, dan lainnya.
+                Hasil analisis disesuaikan dengan kondisi kesehatanmu seperti diabetes, hipertensi, kolesterol, dan lainnya.
               </p>
             </div>
 
@@ -57,7 +57,7 @@ export default function Home() {
               </div>
               <h3 className="font-semibold text-base mb-2" style={{ color: '#27500A' }}>Rekomendasi AI</h3>
               <p className="text-sm leading-relaxed" style={{ color: '#5F5E5A' }}>
-                Saran konsumsi, peringatan bahan berbahaya, dan alternatif produk lebih sehat — semuanya dari AI.
+                Saran konsumsi, peringatan bahan berbahaya, dan alternatif produk lebih sehat dari AI.
               </p>
             </div>
 
@@ -82,7 +82,7 @@ export default function Home() {
               {
                 step: '1',
                 title: 'Upload Foto',
-                desc: 'Foto kemasan produk makanan — bisa 1 foto atau 3 foto (depan, nutrition facts, bahan).',
+                desc: 'Foto kemasan produk makanan, dapat berupa 1 foto atau 3 foto (depan, nutrition facts, dan bahan).',
                 icon: (
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
                 ),
@@ -90,7 +90,7 @@ export default function Home() {
               {
                 step: '2',
                 title: 'AI Menganalisis',
-                desc: 'OCR membaca informasi nutrisi, lalu AI menganalisis kandungan berdasarkan profilmu.',
+                desc: 'OCR membaca informasi nutrisi, lalu AI menganalisis kandungan berdasarkan profil kesehatanmu.',
                 icon: (
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1 1 .03 2.798-1.421 2.798H4.42c-1.45 0-2.42-1.798-1.42-2.798L4.6 15.3" />
                 ),
@@ -144,7 +144,7 @@ export default function Home() {
           <p className="text-base leading-relaxed" style={{ color: '#5F5E5A' }}>
             Nutria hadir untuk membantu semua orang membuat pilihan makanan yang lebih baik dan lebih sadar.
             Dengan teknologi OCR dan kecerdasan buatan, kami menganalisis kandungan nutrisi produk makanan
-            sesuai kondisi dan tujuan kesehatan masing-masing pengguna — agar hidup sehat bisa dimulai dari
+            sesuai kondisi dan tujuan kesehatan masing-masing pengguna, agar hidup sehat bisa dimulai dari
             hal kecil seperti membaca label makanan.
           </p>
         </div>
@@ -152,12 +152,12 @@ export default function Home() {
 
       {/* Footer */}
       <footer
-        className="py-8 px-4 text-center text-sm"
+        className="py-8 px-4 flex flex-col items-center justify-center text-sm gap-2"
         style={{ borderTop: '0.5px solid #d4e8c2', color: '#5F5E5A' }}
       >
-        <span style={{ color: '#27500A', fontWeight: 500 }}>Nutri</span>
-        <span style={{ color: '#639922', fontWeight: 500 }}>a</span>
-        {' '}— Analisis nutrisi berbasis AI
+        <img src="/nutria-text.png" alt="Nutria" className="h-6 w-auto" />
+        <span>Analisis nutrisi berbasis AI</span>
+        <span>© 2024 Teknologi Informasi ITS (044, 059, 064)</span>
       </footer>
 
     </div>

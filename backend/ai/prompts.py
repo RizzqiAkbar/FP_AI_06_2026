@@ -16,7 +16,7 @@ def get_analysis_prompt(
 
     return f"""
 Analyze the nutrition information below.
-
+Give it in Indonesian
 Do not mention product names, brand names, or company names.
 Refer to the item only as "this product" or "the product".
 Do not use any introduction such as "As Nutria AI", "As an AI", "I've analyzed", or similar.
@@ -41,7 +41,7 @@ FLAGGED INGREDIENTS:
 Provide ONLY valid JSON with this exact structure:
 {{
     "analysis": "Personalized explanation",
-    "recommendation": "Provide a personalized, actionable recommendation (2-3 sentences) on how to consume this based on the user's profile and goals, avoiding repetition of the main analysis.",
+    "recommendation": "Provide a Safe to consume / Consume occasionally / Avoid, a personalized why, and a safe amount of consumption for this product (2-3 sentences) based on the user's profile and goals, avoiding repetition of the main analysis.",
     "alternatives": [
         "Alternative 1",
         "Alternative 2",
