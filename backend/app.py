@@ -24,7 +24,7 @@ def create_app():
     # Health check endpoint
     @app.route("/")
     def home():
-        return {"status": "running", "app": "NutriGuard AI Backend"}
+        return {"status": "running", "app": "Nutria AI Backend"}
 
     return app
 

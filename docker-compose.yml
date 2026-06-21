@@ -5,13 +5,13 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: nutriguard-backend
+    container_name: nutria-backend
     ports:
       - "5000:5000"
     environment:
       - FLASK_DEBUG=True
       - TESSERACT_CMD=/usr/bin/tesseract
-      - SECRET_KEY=${SECRET_KEY:-nutriguard-dev-key}
+      - SECRET_KEY=${SECRET_KEY:-nutria-dev-key}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
     volumes:
       # Mount source code untuk hot-reload saat development
@@ -26,7 +26,7 @@ services:
   #   build:
   #     context: ./frontend
   #     dockerfile: Dockerfile
-  #   container_name: nutriguard-frontend
+  #   container_name: nutria-frontend
   #   ports:
   #     - "3000:3000"
   #   environment:

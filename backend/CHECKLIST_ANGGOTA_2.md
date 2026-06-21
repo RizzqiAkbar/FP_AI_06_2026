@@ -134,8 +134,8 @@ docker-compose up --build
 
 # Atau manual
 cd backend
-docker build -t nutriguard-backend .
-docker run -p 5000:5000 nutriguard-backend
+docker build -t nutria-backend .
+docker run -p 5000:5000 nutria-backend
 ```
 
 Backend akan berjalan di `http://localhost:5000` dengan Tesseract OCR + bahasa Indonesia sudah terinstall di dalam container.
@@ -196,7 +196,7 @@ pip install -r requirements.txt
 python app.py
 
 # 5. Test di browser
-# http://localhost:5000 → {"status": "running", "app": "NutriGuard AI Backend"}
+# http://localhost:5000 → {"status": "running", "app": "Nutria AI Backend"}
 ```
 
 ## Cara Test dengan Postman

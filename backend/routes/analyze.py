@@ -130,8 +130,6 @@ def analyze():
         flagged = check_ingredients(parsed_data.get("combined_text", ""))
         
         ai_result = get_gemini_analysis(
-            parsed_data.get("combined_text", ""),
-            parsed_data.get("product_name", ""),
             parsed_data.get("nutrition_data", {}),
             user_profile,
             risk["score"],
@@ -248,8 +246,6 @@ def upload():
                 flagged = check_ingredients(text)
 
                 ai_result = get_gemini_analysis(
-                    text,
-                    "",
                     nutrition_data,
                     user_profile,
                     risk["score"],
@@ -300,4 +296,4 @@ def upload():
 
 @analyze_bp.route("/health", methods=["GET"])
 def health_check():
-    return jsonify({"status": "healthy", "service": "NutriGuard AI Backend"}), 200
+    return jsonify({"status": "healthy", "service": "Nutria AI Backend"}), 200

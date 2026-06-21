@@ -6,7 +6,7 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
           <Link href="/" className="flex items-center space-x-2">
-            <span className="text-2xl font-bold text-green-600">Nutrify</span>
+            <span className="text-2xl font-bold text-green-600">Nutria</span>
           </Link>
           <div className="flex space-x-6 items-center">
             <Link href="/" className="text-gray-600 hover:text-green-600 font-medium">Home</Link>

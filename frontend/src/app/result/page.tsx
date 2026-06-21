@@ -6,12 +6,15 @@ import ResultCard from '../../components/ResultCard';
 
 export default function ResultPage() {
   const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
     const saved = localStorage.getItem('analysisResult');
+    const savedImage = localStorage.getItem('scannedImage');
     if (saved) {
       setResult(JSON.parse(saved));
+      if (savedImage) setImageUrl(savedImage);
     } else {
       router.push('/scan');
     }
@@ -30,6 +33,7 @@ export default function ResultPage() {
     <div className="max-w-4xl mx-auto p-6 py-10">
       <ResultCard 
         result={result} 
+        imageUrl={imageUrl}
         onScanAnother={() => router.push('/scan')} 
       />
     </div>

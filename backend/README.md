@@ -1,4 +1,4 @@
-# NutriGuard AI — Backend
+# Nutria AI — Backend
 
 Flask API + OCR service untuk analisis kemasan makanan.
 
@@ -19,8 +19,8 @@ Atau build manual:
 
 ```bash
 cd backend
-docker build -t nutriguard-backend .
-docker run -p 5000:5000 -e GEMINI_API_KEY=your_key nutriguard-backend
+docker build -t nutria-backend .
+docker run -p 5000:5000 -e GEMINI_API_KEY=your_key nutria-backend
 ```
 
 ---
@@ -143,7 +143,7 @@ backend/
 | Variable | Default | Keterangan |
 |----------|---------|------------|
 | `FLASK_DEBUG` | `True` | Mode debug Flask |
-| `SECRET_KEY` | `nutriguard-dev-key` | Flask secret key |
+| `SECRET_KEY` | `nutria-dev-key` | Flask secret key |
 | `TESSERACT_CMD` | (lihat .env) | Path Tesseract (otomatis di Docker) |
 | `GEMINI_API_KEY` | `` | API key Gemini (Anggota 3) |
 

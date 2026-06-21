@@ -1,5 +1,4 @@
 def get_analysis_prompt(
-    ocr_text,
     parsed_nutrition,
     user_profile,
     risk_score,
@@ -20,13 +19,10 @@ Analyze the nutrition information below.
 
 Do not mention product names, brand names, or company names.
 Refer to the item only as "this product" or "the product".
-Do not use any introduction such as "As Nutrify AI", "As an AI", "I've analyzed", or similar.
+Do not use any introduction such as "As Nutria AI", "As an AI", "I've analyzed", or similar.
 Start directly with the nutritional insight.
 
 PARSED NUTRITION SUMMARY:{nutrition_summary_text}
-
-FOOD INFORMATION:
-{ocr_text}
 
 USER PROFILE:
 Age: {user_profile.get('age', 'N/A')}
@@ -45,7 +41,7 @@ FLAGGED INGREDIENTS:
 Provide ONLY valid JSON with this exact structure:
 {{
     "analysis": "Personalized explanation",
-    "recommendation": "Consume, Limit, or Avoid",
+    "recommendation": "Provide a personalized, actionable recommendation (2-3 sentences) on how to consume this based on the user's profile and goals, avoiding repetition of the main analysis.",
     "alternatives": [
         "Alternative 1",
         "Alternative 2",

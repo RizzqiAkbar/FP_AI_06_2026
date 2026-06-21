@@ -2,10 +2,11 @@ import { AnalysisResult } from '../types/analysis';
 
 interface ResultCardProps {
   result: AnalysisResult;
+  imageUrl?: string | null;
   onScanAnother: () => void;
 }
 
-export default function ResultCard({ result, onScanAnother }: ResultCardProps) {
+export default function ResultCard({ result, imageUrl, onScanAnother }: ResultCardProps) {
   const { analysis } = result;
   const nutritionSummary = analysis?.nutrition_summary || (result as any).nutrition_data || {};
 
@@ -44,6 +45,13 @@ export default function ResultCard({ result, onScanAnother }: ResultCardProps) {
           <span className="mr-2">↻</span> Scan Another
         </button>
       </div>
+
+      {/* Scanned Image */}
+      {imageUrl && (
+        <div className="bg-white/80 backdrop-blur-md p-4 rounded-3xl shadow-lg border border-gray-100 flex justify-center mb-8">
+          <img src={imageUrl} alt="Scanned Food Packaging" className="max-h-64 object-contain rounded-2xl shadow-sm" />
+        </div>
+      )}
       
       {/* Score Card */}
       <div className={`relative overflow-hidden p-10 rounded-3xl shadow-lg border text-center transition-all duration-500 hover:shadow-xl ${getRiskBg(analysis.risk_score)}`}>

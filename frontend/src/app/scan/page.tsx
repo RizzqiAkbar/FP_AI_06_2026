@@ -18,7 +18,18 @@ export default function ScanPage() {
       
       const result = await analyzeFood(file, profile);
       localStorage.setItem('analysisResult', JSON.stringify(result));
-      router.push('/result');
+      
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        try {
+          localStorage.setItem('scannedImage', base64String);
+        } catch (e) {
+          console.warn('Could not save image to localStorage', e);
+        }
+        router.push('/result');
+      };
+      reader.readAsDataURL(file);
     } catch (error) {
       console.error(error);
       alert('Failed to analyze the food. Please try again or check backend server.');

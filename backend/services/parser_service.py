@@ -21,55 +21,67 @@ def parse_nutrition(ocr_text: str) -> dict:
     """
     nutrition_data = {}
 
-    # Definisikan pattern untuk setiap nutrisi
     patterns = {
         "calories": [
-            r"[Cc]alories\s*[:\s]*(\d+)",
-            r"[Ee]nerg[iy]\s*[:\s]*(\d+)",
-            r"[Kk]al(?:ori)?\s*[:\s]*(\d+)",
+            r"(?i)calories.*?(\d+)\s*(?:kcal|cal)",
+            r"(?i)energ[iy].*?(\d+)\s*(?:kcal|cal|kj)",
+            r"(?i)kal(?:ori)?.*?(\d+)\s*(?:kcal|cal)",
+            r"(?i)calories[^\d]*(\d+)",
+            r"(?i)energ[iy][^\d]*(\d+)",
+            r"(?i)kal(?:ori)?[^\d]*(\d+)",
         ],
         "total_fat": [
-            r"[Tt]otal\s*[Ff]at\s*[:\s]*(\d+\.?\d*)\s*g",
-            r"[Ll]emak\s*[Tt]otal\s*[:\s]*(\d+\.?\d*)\s*g",
-            r"[Ff]at\s*[:\s]*(\d+\.?\d*)\s*g",
+            r"(?i)total\s*fat.*?(\d+\.?\d*)\s*g",
+            r"(?i)lemak\s*total.*?(\d+\.?\d*)\s*g",
+            r"(?i)fat.*?(\d+\.?\d*)\s*g",
+            r"(?i)total\s*fat[^\d]*(\d+\.?\d*)",
         ],
         "saturated_fat": [
-            r"[Ss]aturated\s*[Ff]at\s*[:\s]*(\d+\.?\d*)\s*g",
-            r"[Ll]emak\s*[Jj]enuh\s*[:\s]*(\d+\.?\d*)\s*g",
+            r"(?i)saturated\s*fat.*?(\d+\.?\d*)\s*g",
+            r"(?i)lemak\s*jenuh.*?(\d+\.?\d*)\s*g",
+            r"(?i)saturated\s*fat[^\d]*(\d+\.?\d*)",
         ],
         "trans_fat": [
-            r"[Tt]rans\s*[Ff]at\s*[:\s]*(\d+\.?\d*)\s*g",
-            r"[Ll]emak\s*[Tt]rans\s*[:\s]*(\d+\.?\d*)\s*g",
+            r"(?i)trans\s*fat.*?(\d+\.?\d*)\s*g",
+            r"(?i)lemak\s*trans.*?(\d+\.?\d*)\s*g",
+            r"(?i)trans\s*fat[^\d]*(\d+\.?\d*)",
         ],
         "cholesterol": [
-            r"[Cc]holesterol\s*[:\s]*(\d+\.?\d*)\s*mg",
-            r"[Kk]olesterol\s*[:\s]*(\d+\.?\d*)\s*mg",
+            r"(?i)cholesterol.*?(\d+\.?\d*)\s*mg",
+            r"(?i)kolesterol.*?(\d+\.?\d*)\s*mg",
+            r"(?i)cholesterol[^\d]*(\d+\.?\d*)",
         ],
         "sodium": [
-            r"[Ss]odium\s*[:\s]*(\d+\.?\d*)\s*mg",
-            r"[Nn]atrium\s*[:\s]*(\d+\.?\d*)\s*mg",
+            r"(?i)sodium.*?(\d+\.?\d*)\s*mg",
+            r"(?i)natrium.*?(\d+\.?\d*)\s*mg",
+            r"(?i)sodium[^\d]*(\d+\.?\d*)",
         ],
         "total_carbohydrate": [
-            r"[Tt]otal\s*[Cc]arbohydrate\s*[:\s]*(\d+\.?\d*)\s*g",
-            r"[Kk]arbohidrat\s*[Tt]otal\s*[:\s]*(\d+\.?\d*)\s*g",
-            r"[Cc]arbohydrate\s*[:\s]*(\d+\.?\d*)\s*g",
+            r"(?i)total\s*carbohydrate.*?(\d+\.?\d*)\s*g",
+            r"(?i)karbohidrat\s*total.*?(\d+\.?\d*)\s*g",
+            r"(?i)carbohydrate.*?(\d+\.?\d*)\s*g",
+            r"(?i)total\s*carbohydrate[^\d]*(\d+\.?\d*)",
         ],
         "dietary_fiber": [
-            r"[Dd]ietary\s*[Ff]iber\s*[:\s]*(\d+\.?\d*)\s*g",
-            r"[Ss]erat\s*[Pp]angan\s*[:\s]*(\d+\.?\d*)\s*g",
-            r"[Ff]iber\s*[:\s]*(\d+\.?\d*)\s*g",
+            r"(?i)dietary\s*fiber.*?(\d+\.?\d*)\s*g",
+            r"(?i)serat\s*pangan.*?(\d+\.?\d*)\s*g",
+            r"(?i)fiber.*?(\d+\.?\d*)\s*g",
+            r"(?i)dietary\s*fiber[^\d]*(\d+\.?\d*)",
         ],
         "sugar": [
-            r"[Ss]ugars?\s*[:\s]*(\d+\.?\d*)\s*g",
-            r"[Gg]ula\s*[:\s]*(\d+\.?\d*)\s*g",
-            r"[Tt]otal\s*[Ss]ugars?\s*[:\s]*(\d+\.?\d*)\s*g",
+            r"(?i)sugars?.*?(\d+\.?\d*)\s*g",
+            r"(?i)gula.*?(\d+\.?\d*)\s*g",
+            r"(?i)total\s*sugars?.*?(\d+\.?\d*)\s*g",
+            r"(?i)sugars?[^\d]*(\d+\.?\d*)",
         ],
         "protein": [
-            r"[Pp]rotein\s*[:\s]*(\d+\.?\d*)\s*g",
+            r"(?i)protein.*?(\d+\.?\d*)\s*g",
+            r"(?i)protein[^\d]*(\d+\.?\d*)",
         ],
         "serving_size": [
-            r"[Ss]erving\s*[Ss]ize\s*[:\s]*(\d+\.?\d*)\s*(?:g|ml|oz)",
-            r"[Tt]akaran\s*[Ss]aji\s*[:\s]*(\d+\.?\d*)\s*(?:g|ml)",
+            r"(?i)serving\s*size.*?(\d+\.?\d*)\s*(?:g|ml|oz)",
+            r"(?i)takaran\s*saji.*?(\d+\.?\d*)\s*(?:g|ml)",
+            r"(?i)serving\s*size[^\d]*(\d+\.?\d*)",
         ],
     }
 
@@ -77,7 +89,18 @@ def parse_nutrition(ocr_text: str) -> dict:
         for pattern in regex_list:
             match = re.search(pattern, ocr_text)
             if match:
-                value = float(match.group(1).replace(',', ''))
+                val_str = match.group(1).replace(',', '')
+                # Fix common OCR error: reading 'g' as '9' at the end of a number
+                if val_str.endswith('9') and len(val_str) > 1 and '.' not in val_str:
+                    # Only do this if it looks like a whole number that got a 9 appended
+                    # e.g., 109 -> 10. But 9 -> 9.
+                    val_str = val_str[:-1]
+                
+                try:
+                    value = float(val_str)
+                except ValueError:
+                    continue
+
                 # Calories biasanya integer
                 if nutrient == "calories":
                     value = int(value)
@@ -106,9 +129,8 @@ def parse_ingredients(ocr_text: str) -> list:
     ingredients = []
 
     # Cari bagian ingredients
-    # Pattern: "Ingredients:" atau "INGREDIENTS:" diikuti daftar
     ingredient_match = re.search(
-        r"[Ii]ngredients?\s*[:\s]*(.*?)(?:\n\n|\Z)",
+        r"(?i)ingredients?[\s:;\-\.]*(.*?)(?:\n\n|\Z)",
         ocr_text,
         re.DOTALL,
     )
@@ -116,7 +138,7 @@ def parse_ingredients(ocr_text: str) -> list:
     if not ingredient_match:
         # Coba format Bahasa Indonesia
         ingredient_match = re.search(
-            r"[Kk]omposisi\s*[:\s]*(.*?)(?:\n\n|\Z)",
+            r"(?i)komposisi[\s:;\-\.]*(.*?)(?:\n\n|\Z)",
             ocr_text,
             re.DOTALL,
         )

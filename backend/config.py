@@ -9,7 +9,7 @@ class Config:
 
     # Flask
     DEBUG = os.getenv("FLASK_DEBUG", "True").lower() in ("true", "1")
-    SECRET_KEY = os.getenv("SECRET_KEY", "nutriguard-dev-key")
+    SECRET_KEY = os.getenv("SECRET_KEY", "nutria-dev-key")
 
     # Upload settings
     UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")
