@@ -9,13 +9,7 @@ load_dotenv()
 
 def create_app():
     """Create and configure the Flask application."""
-    if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-
-    app.run(
-        host="0.0.0.0",
-        port=port
-    )
+    app = Flask(__name__)
     app.config.from_object(Config)
 
     # Initialize cache DB
@@ -41,4 +35,5 @@ def create_app():
 
 if __name__ == "__main__":
     app = create_app()
-    app.run(debug=app.config.get("DEBUG", True), host="0.0.0.0", port=5000)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(debug=app.config.get("DEBUG", True), host="0.0.0.0", port=port)

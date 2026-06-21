@@ -38,7 +38,8 @@ export default function ScanPage() {
     formData.append('user_profile', JSON.stringify(userProfile));
 
     try {
-      const res = await fetch('http://localhost:5000/api/analyze', {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+      const res = await fetch(`${API_URL}/analyze`, {
         method: 'POST',
         body: formData,
       });
@@ -48,7 +49,8 @@ export default function ScanPage() {
         resultRef.current?.scrollIntoView({ behavior: 'smooth' });
       }, 100);
     } catch {
-      setError('Gagal terhubung ke server. Pastikan backend berjalan di http://localhost:5000');
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+      setError(`Gagal terhubung ke server. Pastikan backend berjalan di ${API_URL}`);
     } finally {
       setLoading(false);
     }
