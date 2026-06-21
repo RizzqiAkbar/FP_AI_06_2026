@@ -106,7 +106,7 @@ def get_gemini_multimodal_analysis(image_paths: dict, user_profile: dict) -> jso
         genai.configure(api_key=api_key)
         
         # We use gemini-2.5-flash-tts for vision tasks
-        model = genai.GenerativeModel("gemini-2.5-flash-tts")
+        model = genai.GenerativeModel("gemini-2.5-flash-lite")
         
         # Load all valid image paths
         contents = []
