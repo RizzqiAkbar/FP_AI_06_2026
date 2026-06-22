@@ -272,6 +272,7 @@ def upload():
     Endpoint sederhana untuk upload gambar + OCR saja.
     """
     upload_folder = current_app.config["UPLOAD_FOLDER"]
+    image_paths = {}
 
     if "images" in request.files and len(request.files.getlist("images")) > 0:
         files = request.files.getlist("images")
