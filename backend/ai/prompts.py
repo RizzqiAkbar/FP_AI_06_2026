@@ -40,7 +40,7 @@ FLAGGED INGREDIENTS:
 
 Provide ONLY valid JSON with this exact structure:
 {{
-    "analysis": "Personalized explanation (2-3 paragraphs) of the nutritional value and its impact on the user based on their profile, health condition, and flagged ingredients."
+    "analysis": "### Ringkasan\\n[1 kalimat ringkasan]\\n\\n### Perhatian Utama\\n- [Poin 1]\\n- [Poin 2]\\n\\n### Rekomendasi\\n[Saran singkat dan dapat ditindaklanjuti]\\n\\n### Analisis Detail Opsional\\n[1 paragraf penjelasan spesifik berdasarkan profil pengguna]"
 }}
 """
 
@@ -59,8 +59,8 @@ def get_multimodal_analysis_prompt(user_profile: dict) -> str:
     return f"""
 Analyze the provided image(s) of a food product packaging (which may include nutrition facts, ingredients list, or front label).
 Perform two tasks:
-1. Extract the product name, nutrition facts values, and ingredients list.
-2. Based on the user profile below, write a personalized nutrition analysis (2-3 paragraphs in Indonesian).
+1. Extract the product name, nutrition facts values, and ingredients list. IF the image does NOT contain any food product, nutrition panel, or ingredients list (e.g., it is a selfie, animal, landscape, or unrelated document), set "invalid_image" to true and leave other fields empty.
+2. Based on the user profile below, write a personalized, concise nutrition analysis.
 
 USER PROFILE:
 - Age: {age}
@@ -71,12 +71,14 @@ USER PROFILE:
 
 CRITICAL RULES FOR PERSONALIZED ANALYSIS:
 - Write the analysis in Indonesian.
+- Keep it concise and structured EXACTLY with these sections: ### Ringkasan, ### Perhatian Utama, ### Rekomendasi, ### Analisis Detail Opsional.
 - Explain the nutritional value of this product and its impact on the user based on their profile, goal, and health conditions.
 - Do not mention specific product names, brand names, or company names in the analysis. Refer to the item only as "produk ini" or "produk tersebut".
 - Do not use any introductory phrase like "Sebagai AI", "Sebagai Nutria AI", "Berdasarkan analisis saya", or similar. Start directly with the nutritional insight.
 
 Return the result in the following JSON format:
 {{
+  "invalid_image": false,
   "product_name": "Product Name (or empty string if not visible/detectable)",
   "nutrition_data": {{
     "calories": integer,
@@ -93,7 +95,7 @@ Return the result in the following JSON format:
     "serving_size": float
   }},
   "ingredients": ["ingredient1", "ingredient2", ...],
-  "analysis": "The personalized nutrition explanation text in Indonesian."
+  "analysis": "### Ringkasan\\n...\\n\\n### Perhatian Utama\\n...\\n\\n### Rekomendasi\\n...\\n\\n### Analisis Detail Opsional\\n..."
 }}
 
 Ensure that "nutrition_data" values are numerical (floats/integers, e.g. 320 or 12.5), in standard units (calories in kcal, sodium/cholesterol in mg, others in g). Do not include units (like "g" or "mg") in the values. If any nutrition value is not found or not visible, set it to null or omit it.

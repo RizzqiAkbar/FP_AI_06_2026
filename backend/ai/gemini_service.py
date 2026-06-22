@@ -157,6 +157,8 @@ def get_gemini_multimodal_analysis(image_paths: dict, user_profile: dict) -> jso
                 text = text.strip()
                 
                 parsed = json.loads(text)
+                if parsed.get("invalid_image", False):
+                    return {"invalid_image": True}
                 return parsed
             except Exception as e:
                 print(f"Gemini Multimodal Vision Error with {model_name}: {e}")

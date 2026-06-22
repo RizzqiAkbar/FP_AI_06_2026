@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import UploadCard, { UploadPayload } from '@/components/UploadCard';
+import EditableNutritionFacts, { NutritionData } from '@/components/EditableNutritionFacts';
 import Loading from '@/components/Loading';
 import ResultCard from '@/components/ResultCard';
 import { AnalysisResult } from '@/types/analysis';
@@ -13,44 +14,98 @@ export default function ScanPage() {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [hasProfile, setHasProfile] = useState(true);
+  
+  // State for editable step
+  const [extractedData, setExtractedData] = useState<{
+    nutrition_data: NutritionData;
+    ingredients: string[];
+    product_name: string;
+  } | null>(null);
+
   const resultRef = useRef<HTMLDivElement>(null);
+  const editRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setHasProfile(!!localStorage.getItem('userProfile'));
   }, []);
 
-  const handleAnalyze = async (payload: UploadPayload) => {
+  const handleExtract = async (payload: UploadPayload) => {
     setLoading(true);
     setResult(null);
     setError(null);
+    setExtractedData(null);
 
     const userProfile = JSON.parse(localStorage.getItem('userProfile') || '{}');
     const formData = new FormData();
 
-    if (payload.mode === 'single' && payload.single) {
-      formData.append('image', payload.single);
-    } else if (payload.mode === 'multi' && payload.multi) {
-      if (payload.multi.front_image) formData.append('front_image', payload.multi.front_image);
-      if (payload.multi.nutrition_image) formData.append('nutrition_image', payload.multi.nutrition_image);
-      if (payload.multi.ingredient_image) formData.append('ingredient_image', payload.multi.ingredient_image);
-    }
-
+    payload.images.forEach((img) => {
+      formData.append('images', img);
+    });
+    
     formData.append('user_profile', JSON.stringify(userProfile));
+    formData.append('ai', 'false');
 
     try {
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-      const res = await fetch(`${API_URL}/analyze`, {
+      const res = await fetch(`${API_URL}/upload`, {
         method: 'POST',
         body: formData,
       });
-      const data: AnalysisResult = await res.json();
-      setResult(data);
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data.error || 'Terjadi kesalahan saat mengekstrak data');
+      }
+
+      setExtractedData({
+        nutrition_data: data.nutrition_data || {},
+        ingredients: data.ingredients || [],
+        product_name: data.product_name || '',
+      });
+      setTimeout(() => {
+        editRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    } catch (err: any) {
+      setError(err.message || 'Gagal terhubung ke server.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAnalyzeText = async (data: { nutrition_data: NutritionData; ingredients: string[]; product_name: string }) => {
+    setLoading(true);
+    setError(null);
+    setResult(null);
+
+    const userProfile = JSON.parse(localStorage.getItem('userProfile') || '{}');
+
+    try {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+      const res = await fetch(`${API_URL}/analyze_text`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          nutrition_data: data.nutrition_data,
+          ingredients: data.ingredients,
+          product_name: data.product_name,
+          user_profile: userProfile,
+        }),
+      });
+      const responseData = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(responseData.error || 'Terjadi kesalahan saat menganalisis data');
+      }
+
+      setResult(responseData);
+      setExtractedData(null); // Hide editable form
       setTimeout(() => {
         resultRef.current?.scrollIntoView({ behavior: 'smooth' });
       }, 100);
-    } catch {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-      setError(`Gagal terhubung ke server. Pastikan backend berjalan di ${API_URL}`);
+    } catch (err: any) {
+      setError(err.message || 'Gagal terhubung ke server.');
     } finally {
       setLoading(false);
     }
@@ -83,20 +138,24 @@ export default function ScanPage() {
           </div>
         )}
 
-        <UploadCard onAnalyze={handleAnalyze} loading={loading} />
+        {!extractedData && !result && (
+          <UploadCard onAnalyze={handleExtract} loading={loading && !extractedData} />
+        )}
 
         {/* Tips */}
-        <div
-          className="mt-4 flex gap-3 rounded-[14px] p-4"
-          style={{ backgroundColor: '#EAF3DE', border: '1px solid #C0DD97' }}
-        >
-          <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 24 24" style={{ color: '#639922' }}>
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" />
-          </svg>
-          <p className="text-xs leading-relaxed" style={{ color: '#27500A' }}>
-            <span className="font-semibold">Tips:</span> Pastikan foto cukup terang dan tulisan pada kemasan terlihat jelas agar dapat terbaca dengan akurat.
-          </p>
-        </div>
+        {!extractedData && !result && (
+          <div
+            className="mt-4 flex gap-3 rounded-[14px] p-4"
+            style={{ backgroundColor: '#EAF3DE', border: '1px solid #C0DD97' }}
+          >
+            <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 24 24" style={{ color: '#639922' }}>
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" />
+            </svg>
+            <p className="text-xs leading-relaxed" style={{ color: '#27500A' }}>
+              <span className="font-semibold">Tips:</span> Pastikan foto cukup terang dan tulisan pada kemasan terlihat jelas agar dapat terbaca dengan akurat.
+            </p>
+          </div>
+        )}
 
         {loading && (
           <div className="mt-8">
@@ -106,10 +165,22 @@ export default function ScanPage() {
 
         {error && (
           <div
-            className="mt-6 p-4 rounded-[14px] text-sm"
+            className="mt-6 p-4 rounded-[14px] text-sm whitespace-pre-wrap"
             style={{ backgroundColor: '#fee2e2', border: '0.5px solid #fca5a5', color: '#991b1b' }}
           >
             {error}
+          </div>
+        )}
+
+        {extractedData && (
+          <div ref={editRef} className="mt-8">
+            <EditableNutritionFacts
+              initialNutritionData={extractedData.nutrition_data}
+              initialIngredients={extractedData.ingredients}
+              productName={extractedData.product_name}
+              onAnalyzeText={handleAnalyzeText}
+              loading={loading}
+            />
           </div>
         )}
 

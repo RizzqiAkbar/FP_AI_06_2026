@@ -46,10 +46,8 @@ def analyze():
     try:
         # === VALIDASI & SIMPAN FILE ===
         has_single = "image" in request.files
-        has_multi = any(
-            key in request.files
-            for key in ["nutrition_image", "ingredient_image", "front_image"]
-        )
+        images = request.files.getlist("images")
+        has_multi = len(images) > 0
 
         if not has_single and not has_multi:
             return jsonify({"error": "Tidak ada gambar yang diupload"}), 400
@@ -57,23 +55,15 @@ def analyze():
         image_paths = {}
 
         if has_multi:
-            image_keys = {
-                "nutrition_image": "nutrition",
-                "ingredient_image": "ingredient",
-                "front_image": "front",
-            }
-
-            for form_key, result_key in image_keys.items():
-                if form_key in request.files:
-                    file = request.files[form_key]
-                    if file.filename and allowed_file(file.filename):
-                        filepath = save_upload(file, upload_folder)
-                        saved_files.append(filepath)
-                        image_paths[result_key] = filepath
-                    elif file.filename and not allowed_file(file.filename):
-                        return jsonify(
-                            {"error": f"Format file tidak didukung: {file.filename}"}
-                        ), 400
+            for i, file in enumerate(images):
+                if file.filename and allowed_file(file.filename):
+                    filepath = save_upload(file, upload_folder)
+                    saved_files.append(filepath)
+                    image_paths[f"image_{i}"] = filepath
+                elif file.filename and not allowed_file(file.filename):
+                    return jsonify(
+                        {"error": f"Format file tidak didukung: {file.filename}"}
+                    ), 400
 
             if not image_paths:
                 return jsonify({"error": "Tidak ada file valid yang diupload"}), 400
@@ -148,6 +138,9 @@ def analyze():
             gemini_vision_res = get_gemini_multimodal_analysis(image_paths, user_profile)
             
         if gemini_vision_res:
+            if gemini_vision_res.get("invalid_image"):
+                return jsonify({"error": "No nutrition-related information found.\\n\\nPlease upload:\\n• Product Packaging\\n• Nutrition Facts Panel\\n• Ingredient List"}), 400
+                
             print("[analyze] Gemini Vision analysis successful.")
             product_name = gemini_vision_res.get("product_name", "")
             nutrition_data = gemini_vision_res.get("nutrition_data", {}) or {}
@@ -280,19 +273,24 @@ def upload():
     """
     upload_folder = current_app.config["UPLOAD_FOLDER"]
 
-    if "image" not in request.files:
+    if "images" in request.files and len(request.files.getlist("images")) > 0:
+        files = request.files.getlist("images")
+        for i, file in enumerate(files):
+            if file.filename and allowed_file(file.filename):
+                filepath = save_upload(file, upload_folder)
+                image_paths[f"image_{i}"] = filepath
+        if not image_paths:
+            return jsonify({"error": "Format file tidak didukung"}), 400
+    elif "image" in request.files:
+        file = request.files["image"]
+        if not file.filename:
+            return jsonify({"error": "Nama file kosong"}), 400
+        if not allowed_file(file.filename):
+            return jsonify({"error": "Format file tidak didukung"}), 400
+        filepath = save_upload(file, upload_folder)
+        image_paths["single"] = filepath
+    else:
         return jsonify({"error": "Tidak ada gambar yang diupload"}), 400
-
-    file = request.files["image"]
-
-    if not file.filename:
-        return jsonify({"error": "Nama file kosong"}), 400
-
-    if not allowed_file(file.filename):
-        return jsonify({"error": "Format file tidak didukung"}), 400
-
-    filepath = save_upload(file, upload_folder)
-    image_paths = {"single": filepath}
 
     try:
         # Load user profile from request if present
@@ -353,6 +351,9 @@ def upload():
             gemini_vision_res = get_gemini_multimodal_analysis(image_paths, user_profile)
 
         if gemini_vision_res:
+            if gemini_vision_res.get("invalid_image"):
+                return jsonify({"error": "No nutrition-related information found.\\n\\nPlease upload:\\n• Product Packaging\\n• Nutrition Facts Panel\\n• Ingredient List"}), 400
+                
             print("[upload] Gemini Vision successful.")
             product_name = gemini_vision_res.get("product_name", "")
             nutrition_data = gemini_vision_res.get("nutrition_data", {}) or {}
@@ -464,10 +465,78 @@ def upload():
 
     finally:
         try:
-            if os.path.exists(filepath):
-                os.remove(filepath)
+            for path in image_paths.values():
+                if os.path.exists(path):
+                    os.remove(path)
         except OSError:
             pass
+
+@analyze_bp.route("/analyze_text", methods=["POST"])
+def analyze_text():
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "Data JSON tidak valid"}), 400
+            
+        nutrition_data = data.get("nutrition_data", {})
+        ingredients = data.get("ingredients", [])
+        user_profile = data.get("user_profile", {})
+        product_name = data.get("product_name", "Unknown Product")
+
+        health_cond_str = "normal"
+        conditions = user_profile.get("conditions", [])
+        if conditions and len(conditions) > 0:
+            health_cond_str = conditions[0]
+        else:
+            health_cond_str = user_profile.get("health_condition", "normal")
+            
+        ocr_text = ", ".join(ingredients)
+        risk = calculate_risk_score(nutrition_data, health_cond_str)
+        
+        ingredients_str = ", ".join(ingredients) if isinstance(ingredients, list) else str(ingredients)
+        flagged = check_ingredients(ingredients_str or ocr_text)
+        
+        ai_result = get_gemini_analysis(
+            nutrition_data,
+            user_profile,
+            risk["score"],
+            risk["risk_level"],
+            flagged
+        )
+        
+        from ai.recomendation import generate_local_recommendation, get_alternative_foods
+        recommendation = generate_local_recommendation(
+            risk["risk_level"], 
+            health_cond_str, 
+            user_profile.get("goal", "general health")
+        )
+        
+        alternatives = get_alternative_foods(
+            product_name or "unknown",
+            health_cond_str
+        )
+        
+        analysis_section = {
+            "nutrition_summary": nutrition_data,
+            "risk_score": risk["score"],
+            "risk_level": risk["risk_level"],
+            "flagged_ingredients": flagged,
+            "analysis": ai_result.get("analysis", "") if isinstance(ai_result, dict) else "",
+            "recommendation": recommendation,
+            "alternatives": alternatives
+        }
+        
+        if isinstance(ai_result, dict) and ai_result.get("error"):
+            analysis_section["error"] = ai_result.get("error")
+
+        return jsonify({
+            "success": True,
+            "product_name": product_name,
+            "analysis": analysis_section
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": f"Server error: {str(e)}"}), 500
 
 
 @analyze_bp.route("/health", methods=["GET"])
