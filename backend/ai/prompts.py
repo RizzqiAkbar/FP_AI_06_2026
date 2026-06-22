@@ -43,3 +43,60 @@ Provide ONLY valid JSON with this exact structure:
     "analysis": "Personalized explanation (2-3 paragraphs) of the nutritional value and its impact on the user based on their profile, health condition, and flagged ingredients."
 }}
 """
+
+def get_multimodal_analysis_prompt(user_profile: dict) -> str:
+    age = user_profile.get("age", "N/A")
+    weight = user_profile.get("weight", "N/A")
+    height = user_profile.get("height", "N/A")
+    goal = user_profile.get("goal", "general health")
+    
+    # Normalize health conditions to a nice string
+    conditions = user_profile.get("conditions", [])
+    if not conditions:
+        conditions = [user_profile.get("health_condition", "normal")]
+    conditions_str = ", ".join(conditions) if isinstance(conditions, list) else str(conditions)
+    
+    return f"""
+Analyze the provided image(s) of a food product packaging (which may include nutrition facts, ingredients list, or front label).
+Perform two tasks:
+1. Extract the product name, nutrition facts values, and ingredients list.
+2. Based on the user profile below, write a personalized nutrition analysis (2-3 paragraphs in Indonesian).
+
+USER PROFILE:
+- Age: {age}
+- Weight: {weight} kg
+- Height: {height} cm
+- Goal: {goal}
+- Health Condition(s): {conditions_str}
+
+CRITICAL RULES FOR PERSONALIZED ANALYSIS:
+- Write the analysis in Indonesian.
+- Explain the nutritional value of this product and its impact on the user based on their profile, goal, and health conditions.
+- Do not mention specific product names, brand names, or company names in the analysis. Refer to the item only as "produk ini" or "produk tersebut".
+- Do not use any introductory phrase like "Sebagai AI", "Sebagai Nutria AI", "Berdasarkan analisis saya", or similar. Start directly with the nutritional insight.
+
+Return the result in the following JSON format:
+{{
+  "product_name": "Product Name (or empty string if not visible/detectable)",
+  "nutrition_data": {{
+    "calories": integer,
+    "protein": float,
+    "sugar": float,
+    "fat": float,
+    "total_fat": float,
+    "saturated_fat": float,
+    "trans_fat": float,
+    "cholesterol": float,
+    "sodium": float,
+    "total_carbohydrate": float,
+    "dietary_fiber": float,
+    "serving_size": float
+  }},
+  "ingredients": ["ingredient1", "ingredient2", ...],
+  "analysis": "The personalized nutrition explanation text in Indonesian."
+}}
+
+Ensure that "nutrition_data" values are numerical (floats/integers, e.g. 320 or 12.5), in standard units (calories in kcal, sodium/cholesterol in mg, others in g). Do not include units (like "g" or "mg") in the values. If any nutrition value is not found or not visible, set it to null or omit it.
+
+Return ONLY the raw JSON string. Do not wrap it in markdown code blocks like ```json ``` or ```.
+"""
