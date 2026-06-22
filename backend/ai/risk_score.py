@@ -26,36 +26,36 @@ def calculate_risk_score(nutrition_data, health_condition="normal"):
     fat = _parse_nutrient(nutrition_data.get("fat", 0))
 
     # General rules
-    if sugar > 20:
+    if sugar > 10:
         score -= 20
-    elif sugar > 10:
+    elif sugar > 5:
         score -= 10
 
-    if sodium > 500:
-        score -= 15
-    elif sodium > 300:
+    if sodium > 200:
+        score -= 20
+    elif sodium > 100:
         score -= 10
 
     if protein < 5:
         score -= 10
 
-    if fat > 20:
-        score -= 10
+    if fat > 10:
+        score -= 20
 
     # Disease-aware rules
     health_condition = health_condition.lower()
     if health_condition == "diabetes":
-        if sugar > 15:
-            score -= 25
+        if sugar > 5:
+            score -= 15
     elif health_condition == "hypertension":
-        if sodium > 400:
-            score -= 25
+        if sodium > 200:
+            score -= 15
     elif health_condition == "cholesterol":
         if fat > 15:
-            score -= 20
+            score -= 15
     elif health_condition == "gout":
-        if protein > 15:
-            score -= 20
+        if protein > 10:
+            score -= 15
 
     # Ensure score stays within 0-100
     score = max(0, min(100, score))
