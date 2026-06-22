@@ -139,7 +139,7 @@ def analyze():
             
         if gemini_vision_res:
             if gemini_vision_res.get("invalid_image"):
-                return jsonify({"error": "No nutrition-related information found.\nPlease upload:\n• Product Packaging\n• Nutrition Facts Panel\n• Ingredient List"}), 400
+                return jsonify({"error": "No nutrition-related information found. Please upload Product Packaging, Nutrition Facts Panel, and Ingredient List"}), 400
                 
             print("[analyze] Gemini Vision analysis successful.")
             product_name = gemini_vision_res.get("product_name", "")
