@@ -40,7 +40,7 @@ FLAGGED INGREDIENTS:
 
 Provide ONLY valid JSON with this exact structure:
 {{
-    "analysis": "### Ringkasan\\n[1 kalimat ringkasan]\\n\\n### Perhatian Utama\\n- [Poin 1]\\n- [Poin 2]\\n\\n### Rekomendasi\\n[Saran singkat dan dapat ditindaklanjuti]\\n\\n### Analisis Detail Opsional\\n[1 paragraf penjelasan spesifik berdasarkan profil pengguna]"
+    "analysis": "1. Ringkasan\\n[1 kalimat ringkasan]\\n\\n2. Perhatian Utama\\n- [Poin 1]\\n- [Poin 2]\\n\\n3. Rekomendasi\\n[Saran singkat dan dapat ditindaklanjuti]\\n\\n4. Analisis Detail Opsional\\n[1 paragraf penjelasan spesifik berdasarkan profil pengguna]"
 }}
 """
 
@@ -95,7 +95,7 @@ Return the result in the following JSON format:
     "serving_size": float
   }},
   "ingredients": ["ingredient1", "ingredient2", ...],
-  "analysis": "### Ringkasan\\n...\\n\\n### Perhatian Utama\\n...\\n\\n### Rekomendasi\\n...\\n\\n### Analisis Detail Opsional\\n..."
+  "analysis": "1. Ringkasan\\n...\\n\\n2. Perhatian Utama\\n...\\n\\n3. Rekomendasi\\n...\\n\\n4. Analisis Detail Opsional\\n..."
 }}
 
 Ensure that "nutrition_data" values are numerical (floats/integers, e.g. 320 or 12.5), in standard units (calories in kcal, sodium/cholesterol in mg, others in g). Do not include units (like "g" or "mg") in the values. If any nutrition value is not found or not visible, set it to null or omit it.

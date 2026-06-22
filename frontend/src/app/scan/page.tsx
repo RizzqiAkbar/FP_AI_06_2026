@@ -14,6 +14,7 @@ export default function ScanPage() {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [hasProfile, setHasProfile] = useState(true);
+  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   
   // State for editable step
   const [extractedData, setExtractedData] = useState<{
@@ -34,6 +35,10 @@ export default function ScanPage() {
     setResult(null);
     setError(null);
     setExtractedData(null);
+    uploadedImages.forEach(url => URL.revokeObjectURL(url));
+
+    const previewUrls = payload.images.map(img => URL.createObjectURL(img));
+    setUploadedImages(previewUrls);
 
     const userProfile = JSON.parse(localStorage.getItem('userProfile') || '{}');
     const formData = new FormData();
@@ -172,6 +177,19 @@ export default function ScanPage() {
           </div>
         )}
 
+        {uploadedImages.length > 0 && (extractedData || result) && (
+          <div className="mb-6 bg-white rounded-[14px] p-6" style={{ border: '0.5px solid #d4e8c2' }}>
+            <h3 className="text-sm font-semibold mb-3" style={{ color: '#27500A' }}>Foto Kemasan</h3>
+            <div className="grid grid-cols-3 gap-3">
+              {uploadedImages.map((src, i) => (
+                <div key={i} className="aspect-square rounded-lg overflow-hidden" style={{ border: '1px solid #d4e8c2' }}>
+                  <img src={src} alt={`Uploaded ${i + 1}`} className="w-full h-full object-cover" />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {extractedData && (
           <div ref={editRef} className="mt-8">
             <EditableNutritionFacts
@@ -186,7 +204,12 @@ export default function ScanPage() {
 
         {result && (
           <div ref={resultRef} className="mt-8">
-            <ResultCard result={result} onScanAnother={() => setResult(null)} />
+            <ResultCard result={result} onScanAnother={() => {
+              setResult(null);
+              setExtractedData(null);
+              uploadedImages.forEach(url => URL.revokeObjectURL(url));
+              setUploadedImages([]);
+            }} />
           </div>
         )}
 
