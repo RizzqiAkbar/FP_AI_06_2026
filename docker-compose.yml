@@ -14,9 +14,7 @@ services:
       - SECRET_KEY=${SECRET_KEY:-nutria-dev-key}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
     volumes:
-      # Mount source code untuk hot-reload saat development
       - ./backend:/app
-      # Exclude venv dan __pycache__ dari mount
       - /app/__pycache__
       - /app/venv
     restart: unless-stopped

@@ -157,7 +157,6 @@ export default function Home() {
       >
         <img src="/nutria-text.png" alt="Nutria" className="h-6 w-auto" />
         <span>Analisis nutrisi berbasis AI</span>
-        <span>© 2024 Teknologi Informasi ITS (044, 059, 064)</span>
       </footer>
 
     </div>
